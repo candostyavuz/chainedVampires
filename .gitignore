@@ -1,0 +1,7 @@
+node_modules
+.env
+generative-art/vampireParts
+generative-art/output
+#Hardhat files
+cache
+artifacts
