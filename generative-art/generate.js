@@ -49,19 +49,57 @@ const drawBackground = () => {
 
 const addMetadata = async(_dna, _edition, _rarity, _cidLink) => {
   let dateTime = Date.now();
+  // let tempMetadata = {
+  //   id: `${_edition}`,
+  //   name: `vampire-${_edition}`,
+  //   dna: _dna.join(""),
+  //   description: description,
+  //   // image: `${baseImageUri}/${_edition}`,
+  //   image: _cidLink,
+  //   rarity: _rarity,
+  //   date: dateTime,
+  //   attributes: attributesList,
+  // };
+  let clanString = "";
+  if(_rarity == "tier_0"){
+    clanString = "Elder Vampire";
+  } else if(_rarity == "tier_1"){
+    clanString = "Nosferatu";
+  } else if(_rarity == "tier_2"){
+    clanString = "Predator";
+  } else if(_rarity == "tier_3"){
+    clanString = "Scavenger";
+  } else {
+    clanString = "Forgotten One";
+  }
+
+  attributesList.push(
+    {
+      "display_type": "date", 
+      "trait_type": "Birthday", 
+      "value": dateTime
+    });
+  attributesList.push(
+    {
+      "display_type": "number", 
+      "trait_type": "Generation", 
+      "value": 1
+    });
+  attributesList.push(
+      {
+        "display_type": "number", 
+        "trait_type": "Identity Number", 
+        "value": _edition
+      });
   let tempMetadata = {
-    id: `${_edition}`,
-    name: `vampire-${_edition}`,
-    dna: _dna.join(""),
+    name: `${clanString} ${_edition}`,
     description: description,
-    // image: `${baseImageUri}/${_edition}`,
     image: _cidLink,
-    rarity: _rarity,
-    date: dateTime,
     attributes: attributesList,
   };
   writeMetaData(tempMetadata, _edition);
   metadataList.push(tempMetadata);
+  await testPinataConnection();
   let ipfsCid = await(loadToIpfs(JSON.stringify(tempMetadata)));
   console.log(ipfsCid);
   await(cidToPinata(ipfsCid.path, tempMetadata));
@@ -79,7 +117,8 @@ const writeAllMetaData = (_data) => {
 const addAttributes = (_element) => {
   let selectedElement = _element.layer.selectedElement;
   attributesList.push({
-    name: selectedElement.name,
+    trait_type: _element.layer.selectedElement.layername,
+    value: selectedElement.name,
   });
 };
 
@@ -106,8 +145,10 @@ const constructLayerToDna = (_dna = [], _layers = [], _rarity) => {
     let selectedElement;
     if(layer.name === "circle" || layer.name === "clothes" || layer.name === "hair") {
       selectedElement = layer.elements[_rarity][_dna[index]];
+      selectedElement.layername = layer.name;
     } else {
       selectedElement = layer.elements[_dna[index]];
+      selectedElement.layername = layer.name;
     }
     return {
       location: layer.location,

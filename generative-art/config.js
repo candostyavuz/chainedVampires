@@ -2,10 +2,10 @@ const fs = require("fs");
 const width = 1000;
 const height = 1000;
 const dir = "./generative-art/vampireParts";
-const description = "ChainBite Vampires";
+const description = "Unique Chained Vampire";
 const baseImageUri = "https://chainbite.io/";
 const startEditionFrom = 1;
-const endEditionAt = 5;
+const endEditionAt = 2;
 const rarityWeights = [
   {
     value: "tier_0",
