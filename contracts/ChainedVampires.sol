@@ -16,14 +16,19 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
 
     // State Variables
     uint256 public constant MAX_VAMPIRES = 9999;
-    string private baseNftURI;
-    uint256 private salePrice = 0.05 ether;
-    address payable feeCollector;
+
+    uint16[] availableVampires; 
+
+    bool public saleActive = false;
+
+    string private baseURI;
+    uint256 private salePrice = 0.1 ether;
+    address payable feeCollector;   // for marketplace
 
     /* Team member's wallet addresses (Current Chain: Rinkeby) 
         - Important: Double check this before launching to Avalanche
     */
-    address private member1 = 0x95c5bDD933BE67a9fF67a5DD9aE9dd440b2604dB; // Mozilla-1
+    address private member1 = 0x95c5bDD933BE67a9fF67a5DD9aE9dd440b2604dB; // Mozilla-1, this is also the Owner
     address private member2 = 0x9a8C9C02cB9f56bEEB2F20Fe88e615EB8553dC75; // Mozilla-2
     address private member3 = 0xfe8FD71D3e33B480930090b97DaDabd3935D836E; // Brave
 
@@ -34,6 +39,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
     constructor(string memory _baseNftURI) ERC721("ChainedVampires", "VAMP") {
         setBaseURI(_baseNftURI);
         feeCollector = payable(msg.sender);
+        saleActive = true;
         // Deployer and team gets the first 4 vampires (with random rarity, of course!)
         _safeMint(msg.sender, 0);
         _safeMint(member1, 1);
@@ -41,17 +47,57 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
         _safeMint(member3, 3);
     }
 
-    function summonVampire(uint256 amount) public payable whenNotPaused {
+    function summonVampire(uint256 _amount) public payable whenNotPaused {
+        /* Conditions for minting */
+        require(saleActive == true, "Sale is not active at the moment.");
+        require(_amount < 21, "Can only summon maximum of 20 vampires per transaction");
+
         uint256 currentSupply = totalSupply();
-        require(currentSupply < MAX_VAMPIRES, "All vampires have already been claimed");
-        require(currentSupply <= MAX_VAMPIRES.sub(amount), "Amount exceeds remaining supply");
-        require(amount < 21, "You can summon maximum 20 vampires");
-        require(msg.value >= salePrice.mul(amount), "Insufficient funds to fulfill the order");
-    
-        for(uint256 i = 0; i < amount; i++){
+        require(currentSupply <= MAX_VAMPIRES, "All vampires have already been claimed");
+        require(currentSupply <= MAX_VAMPIRES.sub(_amount), "Amount exceeds remaining supply");
+
+        salePrice = calculateCurrentPrice(currentSupply);
+        require(msg.value >= salePrice.mul(_amount), "Insufficient funds to fulfill the order");
+        
+        // Minting allowed
+        for(uint256 i = 0; i < _amount; i++){
             _tokenIdCounter.increment();
             _safeMint(msg.sender, _tokenIdCounter.current());
         }
+    }
+
+    function calculateCurrentPrice(uint256 _currentSupply) public pure returns (uint256) {
+        if(_currentSupply == MAX_VAMPIRES) {
+            return 66 ether;
+        } else if(_currentSupply >= 9990){
+            return 10 ether;
+        } else if(_currentSupply >= 9900){
+            return 5 ether;
+        } else if(_currentSupply >= 8500){
+            return 3 ether;
+        } else if(_currentSupply >= 5000){
+            return 2.5 ether;
+        } else if(_currentSupply >= 3000){
+            return 2 ether;
+        } else if(_currentSupply >= 1000){
+            return 1.5 ether;
+        } else if(_currentSupply >= 500){
+            return 1 ether;
+        } else if(_currentSupply >= 250){
+            return 0.75 ether;
+        } else {
+            return 0.5 ether;
+        }  
+    }
+
+    function assetsOfOwner(address _owner) public view returns(uint256[] memory) {
+        uint256 assetCount = balanceOf(_owner);
+
+        uint256[] memory assetsId = new uint256[](assetCount);
+        for(uint256 i = 0; i < assetCount; i++) {
+            assetsId[i] = tokenOfOwnerByIndex(_owner, i);
+        }
+        return assetsId;
     }
 
     /* ONLY OWNER OPERATIONS */
@@ -64,12 +110,24 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
         _unpause();
     }
 
-    function setPrice(uint256 _salePrice) public onlyOwner() {
-        salePrice = _salePrice;
+    // function setPrice(uint256 _salePrice) public onlyOwner() {
+    //     salePrice = _salePrice;
+    // }
+
+    function withdraw() external onlyOwner {
+        payable(msg.sender).transfer(address(this).balance);
+    }
+
+    function withdrawTeam() public payable onlyOwner {
+        uint256 distribution = (address(this).balance).div(4);
+        payable(msg.sender).transfer(distribution);
+        payable(member1).transfer(distribution);
+        payable(member2).transfer(distribution);
+        payable(member3).transfer(distribution);
     }
 
     function setBaseURI(string memory _baseNftURI) public onlyOwner {
-        baseNftURI = _baseNftURI;
+        baseURI = _baseNftURI;
     }
 
     /* GETTERS */
@@ -79,7 +137,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
     }
 
     function _baseURI() internal view virtual override returns (string memory) {
-        return baseNftURI;
+        return baseURI;
     }
 
     /* OpenSea Zone - DO NOT DISTURB! */
