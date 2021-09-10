@@ -22,11 +22,21 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     bool private saleActive = false;
     uint256 private salePrice = 0.1 ether;
     
-    address payable feeCollector;   // for marketplace
+    // Marketplace State Variables:
+    enum ItemState {ForSale, Sold, Neutral, Transferred}
+    struct MarketElement {
+        uint256 tokenId;
+        uint256 price;
+        ItemState state;
+    }
+    address payable feeCollector;   
+    mapping(uint256 => MarketElement) public Catacomb;
 
-    /** 
-    * @notice Team member's wallet addresses (Current Chain: Rinkeby) 
-    *        - Important: Double check this before launching to Avalanche
+    event NewSale(uint256 _tokenId, uint256 _salePrice);
+    event ItemBought(uint256 _tokenId, uint256 _price);
+
+    /* Team member's wallet addresses (Current Chain: Rinkeby) 
+       - Important: Double check this before launching to Avalanche
     */ 
     address private member1 = 0x95c5bDD933BE67a9fF67a5DD9aE9dd440b2604dB; // Mozilla-1, this is also the Owner
     address private member2 = 0x9a8C9C02cB9f56bEEB2F20Fe88e615EB8553dC75; // Mozilla-2
@@ -164,11 +174,9 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         _safeMint(_to, getAvailableVampire());
         distributed.add(1);
     }
-
     function transferContractOwnership(address _newOwner) external onlyOwner {
         transferOwnership(_newOwner);
     }
-
     function pause() public onlyOwner {
         saleActive = false;
         _pause();
@@ -233,6 +241,57 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     function _baseURI() internal view virtual override returns (string memory) {
         return baseURI;
     }
+
+    //////////////////////////////////////////////////////////////////
+    /** 
+    * @dev MARKETPLACE FUNCTIONS 
+    */
+
+    function putToSale (uint256 _tokenId, uint256 _salePrice) public {
+        require(msg.sender == ownerOf(_tokenId));
+        require(_salePrice > 0, "Sale price must be greater than zero!");
+        Catacomb[_tokenId].price = _salePrice;
+        Catacomb[_tokenId].state = ItemState.ForSale;
+
+        emit NewSale(_tokenId, _salePrice);
+    }
+
+    function cancelSale (uint256 _tokenId) public {
+        require(msg.sender == ownerOf(_tokenId));
+        Catacomb[_tokenId].state = ItemState.Neutral;
+        delete Catacomb[_tokenId].price;
+    }
+
+    function buyItem (uint256 _tokenId) public payable {
+        address payable itemSeller = payable(ownerOf(_tokenId));
+
+        require(Catacomb[_tokenId].state == ItemState.ForSale, "Item is not for sale!");
+        require(msg.value >= Catacomb[_tokenId].price, "Not enough balance to buy the item.");
+        
+        uint256 serviceFee = calcServiceFee(Catacomb[_tokenId].price);
+        uint256 netAmountToSeller = (Catacomb[_tokenId].price).sub(serviceFee);
+
+        // Money transfer
+        itemSeller.transfer(netAmountToSeller);
+        feeCollector.transfer(serviceFee);
+
+        // Vampire transfer
+        safeTransferFrom(ownerOf(_tokenId), msg.sender, _tokenId);
+        Catacomb[_tokenId].state = ItemState.Sold;
+
+        // emit an event here
+       emit ItemBought(_tokenId, Catacomb[_tokenId].price);
+    }
+
+    /**
+    * @dev Calculate commission fee for the market
+    */
+    function calcServiceFee(uint256 _salePrice) internal pure returns (uint256) {
+        uint256 serviceFee = _salePrice.mul(2);
+        return serviceFee.div(100);
+    }
+
+    //////////////////////////////////////////////////////////////////
 
     /** 
     * @notice - OPENZEPPELIN ZONE - Do Not Disturb!
