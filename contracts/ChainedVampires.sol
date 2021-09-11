@@ -10,10 +10,10 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     using SafeMath for uint256;
 
-    // State Variables
+    // Chained Vampires ERC-721 State Variables
     uint256 public constant MAX_VAMPIRES = 9999;
     uint256 private MAX_RESERVED = 99;
-    uint256 private distributed = 0;
+    uint256 private reservedCounter = 0;
 
     string private baseURI;
 
@@ -34,6 +34,16 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
 
     event NewSale(uint256 _tokenId, uint256 _salePrice);
     event ItemBought(uint256 _tokenId, uint256 _price);
+
+    /**
+    * @dev Tokenomics State Variables
+    * RewardClaims are done according to owner of NFT with specified tokenId
+    */
+    
+    uint256 public totalHolderBalance = 0;                    // Total profit to be distributed to nft holders
+    uint256 public currentDividendPerHolder = 0;                       // Current dividend obtained from minting of a new NFT
+    mapping (uint256 => uint256) public lastDividendAt;   // tokenId to deserved profit for its owner
+    mapping (uint256 => address) public minter;       // tokenId to minter address      
 
     /* Team member's wallet addresses (Current Chain: Rinkeby) 
        - Important: Double check this before launching to Avalanche
@@ -68,13 +78,61 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         require(currentSupply <= MAX_VAMPIRES, "All vampires have already been claimed");
         require(currentSupply <= MAX_VAMPIRES.sub(_amount), "Amount exceeds remaining supply");
 
-        salePrice = calculateCurrentPrice(currentSupply);
+        salePrice = calculateCurrentPrice(currentSupply);   // price for 1 vampire
         require(msg.value >= salePrice.mul(_amount), "Insufficient funds to fulfill the order");
         
         // Minting with random tokenId
-        for(uint256 i = 0; i < _amount; i++){
-            _safeMint(msg.sender, getAvailableVampire());
+        for(uint256 i = 0; i < _amount; i++) {
+            uint256 generatedId = getAvailableVampire();
+            _safeMint(msg.sender, generatedId);
+            minter[generatedId] = msg.sender;
+            lastDividendAt[generatedId] = currentDividendPerHolder;
+            distributeMintFee(salePrice);
         }
+    }
+
+    function distributeMintFee(uint256 _revenue) private {
+        uint256 toHolders = _revenue.div(10);    // 10% is distributed among holders
+        uint256 toContract = _revenue - toHolders;
+        payable(address(this)).transfer(toContract);
+
+        totalHolderBalance += toHolders;                    // Updatede total distributed revenue
+        currentDividendPerHolder += toHolders.div(totalSupply());    // Dividend for current holders
+    }
+
+    function getEarnedAmount(uint256 _tokenId) public view returns (uint256) {
+        return currentDividendPerHolder - lastDividendAt[_tokenId];
+    }
+
+    function claimReward(uint256 _tokenId) public {
+        require(ownerOf(_tokenId) == msg.sender || getApproved(_tokenId) == msg.sender);
+        uint256 rewardBalance = getEarnedAmount(_tokenId);
+        payable(ownerOf(_tokenId)).transfer(rewardBalance);
+        lastDividendAt[_tokenId] = currentDividendPerHolder;
+    }
+
+    /**
+    * @dev Returns the total reward balance for all NFTs that caller owns
+    */
+    function getEarnedAmountAll() public view returns (uint256) {
+        uint tokenCount = balanceOf(msg.sender);
+        uint256 totalReward = 0;
+        for(uint256 i = 0; i < tokenCount; i++) {
+            uint256 tokenId = tokenOfOwnerByIndex(msg.sender, i);    // index is enumarated by balanceOf
+            totalReward += getEarnedAmount(tokenId);
+        }
+        return totalReward;
+    }
+
+    function claimRewardAll() public {
+        uint tokenCount = balanceOf(msg.sender);
+        uint256 totalReward = 0;
+        for(uint256 i = 0; i < tokenCount; i++) {
+            uint256 tokenId = tokenOfOwnerByIndex(msg.sender, i);    // index is enumarated by balanceOf
+            totalReward += getEarnedAmount(tokenId);
+            lastDividendAt[tokenId] = currentDividendPerHolder;
+        }
+        payable(msg.sender).transfer(totalReward);
     }
 
     /**
@@ -120,19 +178,19 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         } else if(_currentSupply >= 9900){
             return 5 ether;
         } else if(_currentSupply >= 8500){
-            return 3 ether;
+            return 4 ether;
         } else if(_currentSupply >= 5000){
-            return 2.5 ether;
+            return 3.5 ether;
         } else if(_currentSupply >= 3000){
-            return 2 ether;
+            return 3 ether;
         } else if(_currentSupply >= 1000){
-            return 1.5 ether;
+            return 2.5 ether;
         } else if(_currentSupply >= 500){
-            return 1 ether;
+            return 2 ether;
         } else if(_currentSupply >= 250){
-            return 0.75 ether;
+            return 1.5 ether;
         } else {
-            return 0.5 ether;
+            return 1 ether;
         }  
     }
 
@@ -169,10 +227,12 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     function summonForReserved(address _to) public onlyOwner {
         require(saleActive == true, "Sale is not active at the moment.");
         require(totalSupply() <= MAX_VAMPIRES, "All vampires have already been claimed");
-        require(distributed <= MAX_RESERVED, "All reserved vampires have been distributed!");
+        require(reservedCounter <= MAX_RESERVED, "All reserved vampires have been distributed!");
         
-        _safeMint(_to, getAvailableVampire());
-        distributed.add(1);
+        uint256 generatedId = getAvailableVampire();
+        _safeMint(_to, generatedId);
+        minter[generatedId] = _to;
+        reservedCounter.add(1);
     }
     function transferContractOwnership(address _newOwner) external onlyOwner {
         transferOwnership(_newOwner);
@@ -231,6 +291,13 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         return totalSupply();
     }
 
+    /**
+    * @dev Returns original minter address for given tokenId
+    */
+    function getOriginalMinter (uint256 _tokenId) public view returns (address) {
+        return minter[_tokenId];
+    }
+
     function baseTokenURI() external view returns (string memory) {
         return baseURI;
     }
@@ -263,17 +330,19 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     }
 
     function buyItem (uint256 _tokenId) public payable {
-        address payable itemSeller = payable(ownerOf(_tokenId));
+        address payable seller = payable(ownerOf(_tokenId));
 
         require(Catacomb[_tokenId].state == ItemState.ForSale, "Item is not for sale!");
         require(msg.value >= Catacomb[_tokenId].price, "Not enough balance to buy the item.");
         
         uint256 serviceFee = calcServiceFee(Catacomb[_tokenId].price);
-        uint256 netAmountToSeller = (Catacomb[_tokenId].price).sub(serviceFee);
+        uint256 minterFee = calcMinterFee(Catacomb[_tokenId].price);
+        uint256 netAmountToSeller = (Catacomb[_tokenId].price).sub(serviceFee.add(minterFee));
 
         // Money transfer
-        itemSeller.transfer(netAmountToSeller);
-        feeCollector.transfer(serviceFee);
+        feeCollector.transfer(serviceFee);                          // market share
+        payable(getOriginalMinter(_tokenId)).transfer(minterFee);   // minter share
+        seller.transfer(netAmountToSeller);                         // seller share
 
         // Vampire transfer
         safeTransferFrom(ownerOf(_tokenId), msg.sender, _tokenId);
@@ -284,11 +353,19 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     }
 
     /**
-    * @dev Calculate commission fee for the market
+    * @dev Calculate commission fee for the market (Currently = %2)
     */
     function calcServiceFee(uint256 _salePrice) internal pure returns (uint256) {
         uint256 serviceFee = _salePrice.mul(2);
         return serviceFee.div(100);
+    }
+
+    /**
+    * @dev Calculate minter fee of market sale (Currently = %2)
+    */
+    function calcMinterFee(uint256 _salePrice) internal pure returns (uint256) {
+        uint256 minterFee = _salePrice.mul(2);
+        return minterFee.div(100);
     }
 
     //////////////////////////////////////////////////////////////////
@@ -305,4 +382,5 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     {
         return super.supportsInterface(interfaceId);
     }
+
 }
