@@ -108,6 +108,11 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         }
     }
 
+    //////////////////////////////////////////////////////////////////
+    /**
+     * @dev TOKENOMICS FUNCTIONS
+     */
+
     function distributeMintFee(uint256 _revenue) private {
         uint256 toHolders = _revenue.div(10); // 10% is distributed among holders
         uint256 toContract = _revenue - toHolders;
@@ -255,8 +260,9 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         return assetsId;
     }
 
+    //////////////////////////////////////////////////////////////////
     /**
-     * @notice - ONLY OWNER FUNCTIONS -
+     * @dev ONLY OWNER FUNCTIONS
      */
 
     /**
@@ -319,8 +325,9 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         baseURI = _baseNftURI;
     }
 
+    //////////////////////////////////////////////////////////////////
     /**
-     * @notice - GETTERS -
+     * @dev GETTER FUNCTIONS
      */
 
     /**
