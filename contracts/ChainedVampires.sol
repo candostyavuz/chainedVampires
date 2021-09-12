@@ -11,7 +11,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     using SafeMath for uint256;
 
     // Chained Vampires ERC-721 State Variables
-    uint256 public constant MAX_VAMPIRES = 9999;
+    uint256 public constant MAX_VAMPIRES = 9; //9999;
     uint256 private MAX_RESERVED = 99;
     uint256 private reservedCounter = 0;
 
@@ -21,6 +21,11 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
 
     bool private saleActive = false;
     uint256 private salePrice = 0.1 ether;
+
+    /** 
+    * @dev Default callback function for receiving ether
+    */
+    receive() external payable {}
 
     // Marketplace State Variables:
     enum ItemState {
@@ -70,7 +75,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     /**
      * @dev Mints a random generated vampire for caller address
      */
-    function mintItem(uint256 _amount) public payable {
+    function summonVampire(uint256 _amount) public payable {
         /* Conditions for minting */
         require(saleActive == true, "Sale is not active at the moment.");
         require(
@@ -248,7 +253,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
      * @dev Sets token id's to array for random selection
      */
     function assignInitialVampireIDs() internal onlyOwner {
-        for (uint16 i = 0; i < 9999; i++) {
+        for (uint16 i = 0; i < MAX_VAMPIRES; i++) {
             availableVampireIDs.push(i);
         }
     }

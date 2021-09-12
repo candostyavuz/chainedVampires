@@ -17,9 +17,32 @@ describe("Chained Vampires contract", function () {
     });
 
     describe("Minting tests", function() {
-        it("should mint nfts", async() => {
-            await Contract.mintItem(1, {value: ethers.utils.parseEther("1.0")});
-            // ...
+        // it("should mint nfts", async() => {
+        //     let deployerBalanceBefore = await Contract.balanceOf(owner.address);
+        //     await Contract.summonVampire(1, {value: ethers.utils.parseEther("1.0")});
+        //     let deployerBalanceAfter = await Contract.balanceOf(owner.address);
+        //     console.log({
+        //         before: deployerBalanceBefore,
+        //         after: deployerBalanceAfter
+        //     })
+        // });
+
+        it("shouldn't allow minting after MAX_VAMPIRES count reached", async() => {
+            let cnt = await Contract.getRemainingSupply();
+            console.log(cnt);
+            for(let i = 0; i < cnt; i++){
+                await Contract.summonVampire(1, {value: ethers.utils.parseEther("1.0")});
+            }
+            console.log((await Contract.getRemainingSupply()).toString());
+            assert.equal(await Contract.getRemainingSupply(), 0, "Remaining supply must be equal to zero");
+
+            try {
+                await Contract.summonVampire(1, {value: ethers.utils.parseEther("1.0")});
+              } catch (error) {
+                err = error
+              }
+            
+              assert.ok(err instanceof Error);
         });
 
     });
