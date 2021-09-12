@@ -53,14 +53,11 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     /* Team member's wallet addresses (Current Chain: Rinkeby) 
        - Important: Double check this before launching to Avalanche
     */
-    address private member1 = 0x95c5bDD933BE67a9fF67a5DD9aE9dd440b2604dB; // Mozilla-1, this is also the Owner
-    address private member2 = 0x9a8C9C02cB9f56bEEB2F20Fe88e615EB8553dC75; // Mozilla-2
-    address private member3 = 0xfe8FD71D3e33B480930090b97DaDabd3935D836E; // Brave
 
     /**
      * @dev Contract constructor
      */
-    constructor(string memory _baseNftURI) ERC721("ChainedVampires", "VAMP") {
+    constructor(string memory _baseNftURI, address member1, address member2) ERC721("ChainedVampires", "VAMP") {
         assignInitialVampireIDs();
         setBaseURI(_baseNftURI);
         feeCollector = payable(msg.sender);
@@ -68,13 +65,12 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         summonForReserved(msg.sender);
         summonForReserved(member1);
         summonForReserved(member2);
-        summonForReserved(member3);
     }
 
     /**
      * @dev Mints a random generated vampire for caller address
      */
-    function summonVampire(uint256 _amount) public payable whenNotPaused {
+    function mintItem(uint256 _amount) public payable {
         /* Conditions for minting */
         require(saleActive == true, "Sale is not active at the moment.");
         require(
@@ -185,27 +181,10 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         uint256 seed = uint256(
             keccak256(
                 abi.encodePacked(
-                    block.timestamp +
-                        block.difficulty +
-                        ((
-                            uint256(keccak256(abi.encodePacked(block.coinbase)))
-                        ) / (block.timestamp)) +
-                        block.gaslimit +
-                        ((uint256(keccak256(abi.encodePacked(msg.sender)))) /
-                            (block.timestamp)) +
+                    block.timestamp + block.difficulty + block.gaslimit +
+                        ((uint256(keccak256(abi.encodePacked(msg.sender)))) / (block.timestamp)) +
                         block.number +
-                        (
-                            (
-                                uint256(
-                                    keccak256(
-                                        abi.encodePacked(
-                                            availableVampireIDs.length,
-                                            msg.sender
-                                        )
-                                    )
-                                )
-                            )
-                        )
+                        ((uint256(keccak256(abi.encodePacked(availableVampireIDs.length,msg.sender)))))
                 )
             )
         );
@@ -295,10 +274,6 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         reservedCounter.add(1);
     }
 
-    function transferContractOwnership(address _newOwner) external onlyOwner {
-        transferOwnership(_newOwner);
-    }
-
     function pause() public onlyOwner {
         saleActive = false;
         _pause();
@@ -313,14 +288,6 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         payable(msg.sender).transfer(address(this).balance);
     }
 
-    function withdrawTeam() public payable onlyOwner {
-        uint256 distribution = (address(this).balance).div(4);
-        payable(msg.sender).transfer(distribution);
-        payable(member1).transfer(distribution);
-        payable(member2).transfer(distribution);
-        payable(member3).transfer(distribution);
-    }
-
     function setBaseURI(string memory _baseNftURI) public onlyOwner {
         baseURI = _baseNftURI;
     }
@@ -333,6 +300,11 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     /**
      * @dev Returns current sale status.
      */
+
+    function getFeeCollector() external view returns (address) {
+        return feeCollector;
+    }
+
     function isSaleActive() public view returns (bool) {
         return saleActive;
     }
