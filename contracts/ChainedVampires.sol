@@ -6,12 +6,13 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+// import "hardhat/console.sol";
 
 contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     using SafeMath for uint256;
 
     // Chained Vampires ERC-721 State Variables
-    uint256 public constant MAX_VAMPIRES = 9; //9999;
+    uint256 public constant MAX_VAMPIRES = 9999;
     uint256 private MAX_RESERVED = 99;
     uint256 private reservedCounter = 0;
 
@@ -85,11 +86,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
 
         uint256 currentSupply = totalSupply();
         require(
-            currentSupply <= MAX_VAMPIRES,
-            "All vampires have already been claimed"
-        );
-        require(
-            currentSupply <= MAX_VAMPIRES.sub(_amount),
+            currentSupply.add(_amount) <= MAX_VAMPIRES.sub(MAX_RESERVED),
             "Amount exceeds remaining supply"
         );
 
@@ -101,10 +98,11 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
 
         // Minting with random tokenId
         for (uint256 i = 0; i < _amount; i++) {
-            uint256 generatedId = getAvailableVampire();
-            _safeMint(msg.sender, generatedId);
-            minter[generatedId] = msg.sender;
-            lastDividendAt[generatedId] = currentDividendPerHolder;
+            uint256 generatedID = getAvailableVampire();
+            // console.log(generatedID);
+            _safeMint(msg.sender, generatedID);
+            minter[generatedID] = msg.sender;
+            lastDividendAt[generatedID] = currentDividendPerHolder;
             distributeMintFee(salePrice);
         }
     }
@@ -172,6 +170,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
             availableVampireIDs.length - 1
         ];
         availableVampireIDs.pop();
+
         return generatedID;
     }
 
@@ -273,9 +272,10 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
             "All reserved vampires have been distributed!"
         );
 
-        uint256 generatedId = getAvailableVampire();
-        _safeMint(_to, generatedId);
-        minter[generatedId] = _to;
+        uint256 generatedID = getAvailableVampire();
+        // console.log(generatedID);
+        _safeMint(_to, generatedID);
+        minter[generatedID] = _to;
         reservedCounter.add(1);
     }
 

@@ -7,8 +7,8 @@ describe("Chained Vampires contract", function () {
     let Contract;
     let owner;
     let baseUri = "ipfs://";
-    const admin1 ="0x95c5bDD933BE67a9fF67a5DD9aE9dd440b2604dB"; // Mozilla-1, this is also the Owner
-    const admin2 ="0x9a8C9C02cB9f56bEEB2F20Fe88e615EB8553dC75"; // Mozilla-2
+    const admin1 = "0x95c5bDD933BE67a9fF67a5DD9aE9dd440b2604dB"; // Mozilla-1, this is also the Owner
+    const admin2 = "0x9a8C9C02cB9f56bEEB2F20Fe88e615EB8553dC75"; // Mozilla-2
 
     before(async () => {
         contract = await ethers.getContractFactory("ChainedVampires");
@@ -16,8 +16,9 @@ describe("Chained Vampires contract", function () {
         Contract = await contract.deploy(baseUri, admin1, admin2);
     });
 
-    describe("Minting tests", function() {
-        // it("should mint nfts", async() => {
+    describe("Minting tests", function () {
+
+        // it("should be able to mint nfts", async() => {
         //     let deployerBalanceBefore = await Contract.balanceOf(owner.address);
         //     await Contract.summonVampire(1, {value: ethers.utils.parseEther("1.0")});
         //     let deployerBalanceAfter = await Contract.balanceOf(owner.address);
@@ -27,23 +28,24 @@ describe("Chained Vampires contract", function () {
         //     })
         // });
 
-        it("shouldn't allow minting after MAX_VAMPIRES count reached", async() => {
+        it("shouldn't allow minting after MAX_VAMPIRES count reached", async () => {
             let cnt = await Contract.getRemainingSupply();
             console.log(cnt);
-            for(let i = 0; i < cnt; i++){
-                await Contract.summonVampire(1, {value: ethers.utils.parseEther("1.0")});
+            for (let i = 0; i < cnt; i++) {
+                await Contract.summonVampire(1, { value: ethers.utils.parseEther("1.0") });
             }
             console.log((await Contract.getRemainingSupply()).toString());
             assert.equal(await Contract.getRemainingSupply(), 0, "Remaining supply must be equal to zero");
 
             try {
-                await Contract.summonVampire(1, {value: ethers.utils.parseEther("1.0")});
-              } catch (error) {
+                await Contract.summonVampire(1, { value: ethers.utils.parseEther("1.0") });
+            } catch (error) {
                 err = error
-              }
-            
-              assert.ok(err instanceof Error);
+            }
+            assert.ok(err instanceof Error);
         });
+
+
 
     });
 
@@ -74,6 +76,6 @@ describe("Chained Vampires contract", function () {
     //     });
     // });
 
-     
+
 
 });
