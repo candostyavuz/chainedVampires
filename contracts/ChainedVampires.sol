@@ -12,8 +12,8 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     using SafeMath for uint256;
 
     // Chained Vampires ERC-721 State Variables
-    uint256 public constant MAX_VAMPIRES = 9999;
-    uint256 private MAX_RESERVED = 99;
+    uint256 public constant MAX_VAMPIRES = 9; //9999;
+    uint256 private MAX_RESERVED = 3;
     uint256 private reservedCounter = 0;
 
     string private baseURI;
@@ -86,7 +86,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
 
         uint256 currentSupply = totalSupply();
         require(
-            currentSupply.add(_amount) <= MAX_VAMPIRES.sub(MAX_RESERVED),
+            currentSupply.add(_amount) <= MAX_VAMPIRES,
             "Amount exceeds remaining supply"
         );
 
@@ -229,16 +229,16 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     /**
      * @dev Returns the array of tokenIds that particular wallet owner holds.
      */
-    function getAssetsOfWallet(address _wallet)
+    function getAssetsOfWallet(address _walletAddr)
         public
         view
         returns (uint256[] memory)
     {
-        uint256 assetCount = balanceOf(_wallet);
+        uint256 assetCount = balanceOf(_walletAddr);
 
         uint256[] memory assetsId = new uint256[](assetCount);
         for (uint256 i = 0; i < assetCount; i++) {
-            assetsId[i] = tokenOfOwnerByIndex(_wallet, i);
+            assetsId[i] = tokenOfOwnerByIndex(_walletAddr, i);
         }
         return assetsId;
     }
@@ -302,14 +302,13 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
      * @dev GETTER FUNCTIONS
      */
 
-    /**
-     * @dev Returns current sale status.
-     */
-
     function getFeeCollector() external view returns (address) {
         return feeCollector;
     }
 
+    /**
+     * @dev Returns current sale status.
+     */
     function isSaleActive() public view returns (bool) {
         return saleActive;
     }
