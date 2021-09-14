@@ -6,115 +6,42 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 // import "hardhat/console.sol";
 
-contract ChainedVampires is
-    ERC721,
-    ERC721Enumerable,
-    ERC721URIStorage,
-    Pausable,
-    Ownable
-{
+contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ownable {
     using SafeMath for uint256;
+    using Counters for Counters.Counter;    
+    Counters.Counter private _tokenIdCounter;
 
-    // Chained Vampires ERC-721 State Variables
+    // Chained Vampires ERC-721 State Variables:
     uint256 public constant MAX_VAMPIRES = 9999;
-    uint256 private MAX_RESERVED = 3;
-    uint256 private reservedCounter = 0;
-
     string private baseURI;
-
-    uint16[] availableVampireIDs;
-
-    bool private saleActive = false;
     uint256 private salePrice = 0.1 ether;
 
-    /**
-     * @dev Default callback function for receiving ether
-     */
-    receive() external payable {}
-
-    // Marketplace State Variables:
-    enum ItemState {
-        ForSale,
-        Sold,
-        Neutral,
-        Transferred
-    }
-    struct MarketElement {
-        uint256 tokenId;
-        uint256 price;
-        ItemState state;
-    }
-    address payable feeCollector;
-    mapping(uint256 => MarketElement) public Catacomb;
-
-    event NewSale(uint256 _tokenId, uint256 _salePrice);
-    event ItemBought(uint256 _tokenId, uint256 _price);
-
-    /**
-     * @dev Tokenomics State Variables
-     * RewardClaims are done according to owner of NFT with specified tokenId
-     */
-
+    // Tokenomic State Variables:
     uint256 public totalHolderBalance = 0; // Total profit to be distributed to nft holders
     uint256 public currentDividendPerHolder = 0; // Current dividend obtained from minting of a new NFT
     mapping(uint256 => uint256) public lastDividendAt; // tokenId to deserved profit for its owner
     mapping(uint256 => address) public minter; // tokenId to minter address
 
-    /* Team member's wallet addresses (Current Chain: Rinkeby) 
-       - Important: Double check this before launching to Avalanche
-    */
+    receive() external payable {}
 
-    /**
-     * @dev Contract constructor
-     */
-    constructor(
-        string memory _baseNftURI,
-        address member1,
-        address member2
-    ) ERC721("ChainedVampires", "VAMP") {
-        assignInitialVampireIDs();
-        setBaseURI(_baseNftURI);
-        feeCollector = payable(msg.sender);
-        saleActive = true;
-        summonForReserved(msg.sender);
-        summonForReserved(member1);
-        summonForReserved(member2);
+    constructor(string memory _baseNftURI) ERC721("ChainedVampires", "VAMP") {
+        setBaseURI(_baseNftURI);  // Summon first vampire to deployer address
     }
 
-    /**
-     * @dev Mints a random generated vampire for caller address
-     */
-    function summonVampire(uint256 _amount) public payable {
-        /* Conditions for minting */
-        require(saleActive == true, "Sale is not active at the moment.");
-        require(
-            _amount < 21,
-            "Can only summon maximum of 20 vampires per transaction"
-        );
-
-        uint256 currentSupply = totalSupply();
-        require(
-            currentSupply.add(_amount) <= MAX_VAMPIRES,
-            "Amount exceeds remaining supply"
-        );
-
-        salePrice = calculateCurrentPrice(currentSupply); // price for 1 vampire
-        require(
-            msg.value >= salePrice.mul(_amount),
-            "Insufficient funds to fulfill the order"
-        );
-
-        // Minting with random tokenId
+    function summonVampire(uint256 _amount) public payable whenNotPaused {
+        require(msg.value >= salePrice.mul(_amount), "Insufficient funds to fulfill the order");
+        require(_amount < 21, "Can only summon maximum of 20 vampires per transaction");
+        require((_tokenIdCounter.current()).add(_amount) <= MAX_VAMPIRES, "Amount exceeds remaining supply");
         for (uint256 i = 0; i < _amount; i++) {
-            uint256 generatedID = getAvailableVampire();
-            // console.log(generatedID);
-            _safeMint(msg.sender, generatedID);
-            minter[generatedID] = msg.sender;
-            lastDividendAt[generatedID] = currentDividendPerHolder;
+            _safeMint(msg.sender, _tokenIdCounter.current());
+            minter[_tokenIdCounter.current()] = msg.sender;
+            lastDividendAt[_tokenIdCounter.current()] = currentDividendPerHolder;
+            _tokenIdCounter.increment();
             distributeMintFee(salePrice);
         }
     }
@@ -176,154 +103,21 @@ contract ChainedVampires is
         payable(msg.sender).transfer(totalReward);
     }
 
-    /**
-     * @dev Uses pseudo-RNG to select a tokenId from remaining vampires
-     */
-    function getAvailableVampire() private returns (uint256) {
-        uint256 randGen = getPseudoRandomNumber(availableVampireIDs.length);
-        uint256 generatedID = uint256(availableVampireIDs[randGen]); // this will be used for minting
-
-        availableVampireIDs[randGen] = availableVampireIDs[
-            availableVampireIDs.length - 1
-        ];
-        availableVampireIDs.pop();
-
-        return generatedID;
-    }
-
-    /**
-     * @dev Pseudo-Random Number Generator
-     */
-    function getPseudoRandomNumber(uint256 _upperLimit)
-        private
-        view
-        returns (uint256)
-    {
-        uint256 seed = uint256(
-            keccak256(
-                abi.encodePacked(
-                    block.timestamp +
-                        block.difficulty +
-                        block.gaslimit +
-                        ((uint256(keccak256(abi.encodePacked(msg.sender)))) /
-                            (block.timestamp)) +
-                        block.number +
-                        (
-                            (
-                                uint256(
-                                    keccak256(
-                                        abi.encodePacked(
-                                            availableVampireIDs.length,
-                                            msg.sender
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                )
-            )
-        );
-        return seed % _upperLimit;
-    }
-
-    /**
-     * @dev Calculates current sale price according to remaining supply
-     */
-    function calculateCurrentPrice(uint256 _currentSupply)
-        private
-        pure
-        returns (uint256)
-    {
-        if (_currentSupply == MAX_VAMPIRES) {
-            return 66 ether;
-        } else if (_currentSupply >= 9990) {
-            return 10 ether;
-        } else if (_currentSupply >= 9900) {
-            return 5 ether;
-        } else if (_currentSupply >= 8500) {
-            return 4 ether;
-        } else if (_currentSupply >= 5000) {
-            return 3.5 ether;
-        } else if (_currentSupply >= 3000) {
-            return 3 ether;
-        } else if (_currentSupply >= 1000) {
-            return 2.5 ether;
-        } else if (_currentSupply >= 500) {
-            return 2 ether;
-        } else if (_currentSupply >= 250) {
-            return 1.5 ether;
-        } else {
-            return 1 ether;
-        }
-    }
-
-    /**
-     * @dev Returns the array of tokenIds that particular wallet owner holds.
-     */
-    function getAssetsOfWallet(address _walletAddr)
-        public
-        view
-        returns (uint256[] memory)
-    {
-        uint256 assetCount = balanceOf(_walletAddr);
-
-        uint256[] memory assetsId = new uint256[](assetCount);
-        for (uint256 i = 0; i < assetCount; i++) {
-            assetsId[i] = tokenOfOwnerByIndex(_walletAddr, i);
-        }
-        return assetsId;
-    }
-
     //////////////////////////////////////////////////////////////////
     /**
-     * @dev ONLY OWNER FUNCTIONS
-     */
+    * @dev ONLY OWNER FUNCTIONS
+    */
 
-    /**
-     * @dev See ERC721URIStorage
-     */
+    // ERC721URIStorage
     function setTokenURI(uint256 tokenId, string memory _tokenURI) external onlyOwner {
         _setTokenURI(tokenId, _tokenURI);
     }
 
-    /**
-     * @dev Sets token id's to array for random selection
-     */
-    function assignInitialVampireIDs() internal onlyOwner {
-        for (uint16 i = 0; i < MAX_VAMPIRES; i++) {
-            availableVampireIDs.push(i);
-        }
-    }
-
-    /**
-     * @dev This minting function is used for promotions
-     *      and distributing one vampire to each team member (total of 3)
-     */
-    function summonForReserved(address _to) public onlyOwner {
-        require(saleActive == true, "Sale is not active at the moment.");
-        require(
-            totalSupply() <= MAX_VAMPIRES,
-            "All vampires have already been claimed"
-        );
-        require(
-            reservedCounter <= MAX_RESERVED,
-            "All reserved vampires have been distributed!"
-        );
-
-        uint256 generatedID = getAvailableVampire();
-        // console.log(generatedID);
-        _safeMint(_to, generatedID);
-        minter[generatedID] = _to;
-        reservedCounter.add(1);
-    }
-
     function pause() public onlyOwner {
-        saleActive = false;
         _pause();
     }
 
     function unpause() public onlyOwner {
-        saleActive = true;
         _unpause();
     }
 
@@ -337,165 +131,53 @@ contract ChainedVampires is
 
     //////////////////////////////////////////////////////////////////
     /**
-     * @dev GETTER FUNCTIONS
-     */
+    * @dev GETTER FUNCTIONS
+    */
 
-    function getFeeCollector() external view returns (address) {
-        return feeCollector;
+    function getAssetsOfWallet(address _walletAddr) public view returns (uint256[] memory)
+    {
+        uint256 assetCount = balanceOf(_walletAddr);
+
+        uint256[] memory assetsId = new uint256[](assetCount);
+        for (uint256 i = 0; i < assetCount; i++) {
+            assetsId[i] = tokenOfOwnerByIndex(_walletAddr, i);
+        }
+        return assetsId;
     }
 
-    /**
-     * @dev Returns current sale status.
-     */
-    function isSaleActive() public view returns (bool) {
-        return saleActive;
+    function tokenURI(uint256 _tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory)
+    {
+        return super.tokenURI(_tokenId);
     }
 
-    /**
-     * @dev Returns current sale price.
-     */
     function getCurrentPrice() public view returns (uint256) {
         return salePrice;
     }
 
-    /**
-     * @dev Returns total number of remaining unclaimed vampires.
-     */
-    function getRemainingSupply() public view returns (uint256) {
-        return availableVampireIDs.length;
-    }
-
-    /**
-     * @dev Returns total number of claimed vampires.
-     */
-    function getTotalClaimedCount() public view returns (uint256) {
-        return totalSupply();
-    }
-
-    /**
-     * @dev Returns original minter address for given tokenId
-     */
     function getOriginalMinter(uint256 _tokenId) public view returns (address) {
         return minter[_tokenId];
     }
 
-    function baseTokenURI() external view returns (string memory) {
-        return baseURI;
-    }
-
-    /**
-     * @dev See ERC-721
-     */
     function _baseURI() internal view virtual override returns (string memory) {
         return baseURI;
     }
 
-    //////////////////////////////////////////////////////////////////
-    /**
-     * @dev MARKETPLACE FUNCTIONS
-     */
-
-    // function putToSale(uint256 _tokenId, uint256 _salePrice) public {
-    //     require(msg.sender == ownerOf(_tokenId));
-    //     require(_salePrice > 0, "Sale price must be greater than zero!");
-    //     Catacomb[_tokenId].price = _salePrice;
-    //     Catacomb[_tokenId].state = ItemState.ForSale;
-
-    //     emit NewSale(_tokenId, _salePrice);
-    // }
-
-    // function cancelSale(uint256 _tokenId) public {
-    //     require(msg.sender == ownerOf(_tokenId));
-    //     Catacomb[_tokenId].state = ItemState.Neutral;
-    //     delete Catacomb[_tokenId].price;
-    // }
-
-    // function buyItem(uint256 _tokenId) public payable {
-    //     address payable seller = payable(ownerOf(_tokenId));
-
-    //     require(
-    //         Catacomb[_tokenId].state == ItemState.ForSale,
-    //         "Item is not for sale!"
-    //     );
-    //     require(
-    //         msg.value >= Catacomb[_tokenId].price,
-    //         "Not enough balance to buy the item."
-    //     );
-
-    //     uint256 serviceFee = calcServiceFee(Catacomb[_tokenId].price);
-    //     uint256 minterFee = calcMinterFee(Catacomb[_tokenId].price);
-    //     uint256 netAmountToSeller = (Catacomb[_tokenId].price).sub(
-    //         serviceFee.add(minterFee)
-    //     );
-
-    //     // Money transfer
-    //     feeCollector.transfer(serviceFee); // market share
-    //     payable(getOriginalMinter(_tokenId)).transfer(minterFee); // minter share
-    //     seller.transfer(netAmountToSeller); // seller share
-
-    //     // Vampire transfer
-    //     safeTransferFrom(ownerOf(_tokenId), msg.sender, _tokenId);
-    //     Catacomb[_tokenId].state = ItemState.Sold;
-
-    //     emit ItemBought(_tokenId, Catacomb[_tokenId].price);
-    // }
-
-    // /**
-    //  * @dev Calculate commission fee for the market (Currently = %2)
-    //  */
-    // function calcServiceFee(uint256 _salePrice)
-    //     internal
-    //     pure
-    //     returns (uint256)
-    // {
-    //     uint256 serviceFee = _salePrice.mul(2);
-    //     return serviceFee.div(100);
-    // }
-
-    // /**
-    //  * @dev Calculate minter fee of market sale (Currently = %2)
-    //  */
-    // function calcMinterFee(uint256 _salePrice) internal pure returns (uint256) {
-    //     uint256 minterFee = _salePrice.mul(2);
-    //     return minterFee.div(100);
-    // }
-
-    //////////////////////////////////////////////////////////////////
-
     /**
      * @notice - OPENZEPPELIN ZONE - Do Not Disturb!
      */
-    // The following functions are overrides required by Solidity.
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal override(ERC721, ERC721Enumerable) whenNotPaused {
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal override(ERC721, ERC721Enumerable) whenNotPaused {
         super._beforeTokenTransfer(from, to, tokenId);
     }
-
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC721Enumerable)
-        returns (bool)
+ 
+    // See {IERC165-supportsInterface}.
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721Enumerable) returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }
 
-    function _burn(uint256 tokenId)
-        internal
-        override(ERC721, ERC721URIStorage)
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage)
     {
         super._burn(tokenId);
     }
 
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        return super.tokenURI(tokenId);
-    }
 }
