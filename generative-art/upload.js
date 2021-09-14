@@ -8,7 +8,8 @@ let pinataIdCnt = 1;
 
 async function getImageCidLink(buffer) {
     const result = await ipfs.add((buffer));
-    return `https://gateway.ipfs.io/ipfs/${result.path}`;
+    // return `https://gateway.ipfs.io/ipfs/${result.path}`;
+    return `https://ipfs.io/ipfs/${result.path}`;
 }
 
 async function loadToIpfs(metadata) {

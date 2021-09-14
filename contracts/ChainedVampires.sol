@@ -3,16 +3,24 @@ pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
 // import "hardhat/console.sol";
 
-contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
+contract ChainedVampires is
+    ERC721,
+    ERC721Enumerable,
+    ERC721URIStorage,
+    Pausable,
+    Ownable
+{
     using SafeMath for uint256;
 
     // Chained Vampires ERC-721 State Variables
-    uint256 public constant MAX_VAMPIRES = 9; //9999;
+    uint256 public constant MAX_VAMPIRES = 9999;
     uint256 private MAX_RESERVED = 3;
     uint256 private reservedCounter = 0;
 
@@ -23,9 +31,9 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     bool private saleActive = false;
     uint256 private salePrice = 0.1 ether;
 
-    /** 
-    * @dev Default callback function for receiving ether
-    */
+    /**
+     * @dev Default callback function for receiving ether
+     */
     receive() external payable {}
 
     // Marketplace State Variables:
@@ -63,7 +71,11 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     /**
      * @dev Contract constructor
      */
-    constructor(string memory _baseNftURI, address member1, address member2) ERC721("ChainedVampires", "VAMP") {
+    constructor(
+        string memory _baseNftURI,
+        address member1,
+        address member2
+    ) ERC721("ChainedVampires", "VAMP") {
         assignInitialVampireIDs();
         setBaseURI(_baseNftURI);
         feeCollector = payable(msg.sender);
@@ -114,7 +126,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
 
     function distributeMintFee(uint256 _revenue) private {
         uint256 toHolders = _revenue.div(10); // 10% is distributed among holders
-        uint256 toContract = _revenue - toHolders;
+        uint256 toContract = _revenue.sub(toHolders);
         payable(address(this)).transfer(toContract);
 
         totalHolderBalance += toHolders; // Updatede total distributed revenue
@@ -122,13 +134,18 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     }
 
     function getEarnedAmount(uint256 _tokenId) public view returns (uint256) {
-        return currentDividendPerHolder - lastDividendAt[_tokenId];
+        return currentDividendPerHolder.sub(lastDividendAt[_tokenId]);
     }
 
     function claimReward(uint256 _tokenId) public {
         require(
             ownerOf(_tokenId) == msg.sender ||
-                getApproved(_tokenId) == msg.sender
+                getApproved(_tokenId) == msg.sender,
+            "Only the owner can claim rewards."
+        );
+        require(
+            getEarnedAmount(_tokenId) != 0,
+            "There is no reward to claim for this token"
         );
         uint256 rewardBalance = getEarnedAmount(_tokenId);
         payable(ownerOf(_tokenId)).transfer(rewardBalance);
@@ -185,10 +202,24 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         uint256 seed = uint256(
             keccak256(
                 abi.encodePacked(
-                    block.timestamp + block.difficulty + block.gaslimit +
-                        ((uint256(keccak256(abi.encodePacked(msg.sender)))) / (block.timestamp)) +
+                    block.timestamp +
+                        block.difficulty +
+                        block.gaslimit +
+                        ((uint256(keccak256(abi.encodePacked(msg.sender)))) /
+                            (block.timestamp)) +
                         block.number +
-                        ((uint256(keccak256(abi.encodePacked(availableVampireIDs.length,msg.sender)))))
+                        (
+                            (
+                                uint256(
+                                    keccak256(
+                                        abi.encodePacked(
+                                            availableVampireIDs.length,
+                                            msg.sender
+                                        )
+                                    )
+                                )
+                            )
+                        )
                 )
             )
         );
@@ -247,6 +278,13 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
     /**
      * @dev ONLY OWNER FUNCTIONS
      */
+
+    /**
+     * @dev See ERC721URIStorage
+     */
+    function setTokenURI(uint256 tokenId, string memory _tokenURI) external onlyOwner {
+        _setTokenURI(tokenId, _tokenURI);
+    }
 
     /**
      * @dev Sets token id's to array for random selection
@@ -357,70 +395,70 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
      * @dev MARKETPLACE FUNCTIONS
      */
 
-    function putToSale(uint256 _tokenId, uint256 _salePrice) public {
-        require(msg.sender == ownerOf(_tokenId));
-        require(_salePrice > 0, "Sale price must be greater than zero!");
-        Catacomb[_tokenId].price = _salePrice;
-        Catacomb[_tokenId].state = ItemState.ForSale;
+    // function putToSale(uint256 _tokenId, uint256 _salePrice) public {
+    //     require(msg.sender == ownerOf(_tokenId));
+    //     require(_salePrice > 0, "Sale price must be greater than zero!");
+    //     Catacomb[_tokenId].price = _salePrice;
+    //     Catacomb[_tokenId].state = ItemState.ForSale;
 
-        emit NewSale(_tokenId, _salePrice);
-    }
+    //     emit NewSale(_tokenId, _salePrice);
+    // }
 
-    function cancelSale(uint256 _tokenId) public {
-        require(msg.sender == ownerOf(_tokenId));
-        Catacomb[_tokenId].state = ItemState.Neutral;
-        delete Catacomb[_tokenId].price;
-    }
+    // function cancelSale(uint256 _tokenId) public {
+    //     require(msg.sender == ownerOf(_tokenId));
+    //     Catacomb[_tokenId].state = ItemState.Neutral;
+    //     delete Catacomb[_tokenId].price;
+    // }
 
-    function buyItem(uint256 _tokenId) public payable {
-        address payable seller = payable(ownerOf(_tokenId));
+    // function buyItem(uint256 _tokenId) public payable {
+    //     address payable seller = payable(ownerOf(_tokenId));
 
-        require(
-            Catacomb[_tokenId].state == ItemState.ForSale,
-            "Item is not for sale!"
-        );
-        require(
-            msg.value >= Catacomb[_tokenId].price,
-            "Not enough balance to buy the item."
-        );
+    //     require(
+    //         Catacomb[_tokenId].state == ItemState.ForSale,
+    //         "Item is not for sale!"
+    //     );
+    //     require(
+    //         msg.value >= Catacomb[_tokenId].price,
+    //         "Not enough balance to buy the item."
+    //     );
 
-        uint256 serviceFee = calcServiceFee(Catacomb[_tokenId].price);
-        uint256 minterFee = calcMinterFee(Catacomb[_tokenId].price);
-        uint256 netAmountToSeller = (Catacomb[_tokenId].price).sub(
-            serviceFee.add(minterFee)
-        );
+    //     uint256 serviceFee = calcServiceFee(Catacomb[_tokenId].price);
+    //     uint256 minterFee = calcMinterFee(Catacomb[_tokenId].price);
+    //     uint256 netAmountToSeller = (Catacomb[_tokenId].price).sub(
+    //         serviceFee.add(minterFee)
+    //     );
 
-        // Money transfer
-        feeCollector.transfer(serviceFee); // market share
-        payable(getOriginalMinter(_tokenId)).transfer(minterFee); // minter share
-        seller.transfer(netAmountToSeller); // seller share
+    //     // Money transfer
+    //     feeCollector.transfer(serviceFee); // market share
+    //     payable(getOriginalMinter(_tokenId)).transfer(minterFee); // minter share
+    //     seller.transfer(netAmountToSeller); // seller share
 
-        // Vampire transfer
-        safeTransferFrom(ownerOf(_tokenId), msg.sender, _tokenId);
-        Catacomb[_tokenId].state = ItemState.Sold;
+    //     // Vampire transfer
+    //     safeTransferFrom(ownerOf(_tokenId), msg.sender, _tokenId);
+    //     Catacomb[_tokenId].state = ItemState.Sold;
 
-        emit ItemBought(_tokenId, Catacomb[_tokenId].price);
-    }
+    //     emit ItemBought(_tokenId, Catacomb[_tokenId].price);
+    // }
 
-    /**
-     * @dev Calculate commission fee for the market (Currently = %2)
-     */
-    function calcServiceFee(uint256 _salePrice)
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 serviceFee = _salePrice.mul(2);
-        return serviceFee.div(100);
-    }
+    // /**
+    //  * @dev Calculate commission fee for the market (Currently = %2)
+    //  */
+    // function calcServiceFee(uint256 _salePrice)
+    //     internal
+    //     pure
+    //     returns (uint256)
+    // {
+    //     uint256 serviceFee = _salePrice.mul(2);
+    //     return serviceFee.div(100);
+    // }
 
-    /**
-     * @dev Calculate minter fee of market sale (Currently = %2)
-     */
-    function calcMinterFee(uint256 _salePrice) internal pure returns (uint256) {
-        uint256 minterFee = _salePrice.mul(2);
-        return minterFee.div(100);
-    }
+    // /**
+    //  * @dev Calculate minter fee of market sale (Currently = %2)
+    //  */
+    // function calcMinterFee(uint256 _salePrice) internal pure returns (uint256) {
+    //     uint256 minterFee = _salePrice.mul(2);
+    //     return minterFee.div(100);
+    // }
 
     //////////////////////////////////////////////////////////////////
 
@@ -443,5 +481,21 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Pausable, Ownable {
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
+    }
+
+    function _burn(uint256 tokenId)
+        internal
+        override(ERC721, ERC721URIStorage)
+    {
+        super._burn(tokenId);
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
     }
 }

@@ -1,7 +1,7 @@
 require("dotenv").config();
 const fs = require("fs");
 const { createCanvas, loadImage } = require("canvas");
-const { getImageCidLink, loadToIpfs, testPinataConnection, cidToPinata} = require("./upload.js");
+const { getImageCidLink, loadToIpfs, testPinataConnection, cidToPinata } = require("./upload.js");
 const {
   layers,
   width,
@@ -20,15 +20,15 @@ var attributesList = [];
 var dnaList = [];
 const enableIPFS = true;
 
-const saveImage = async(_editionCount) => {
+const saveImage = async (_editionCount) => {
   let imgLink = `./generative-art/output/${_editionCount}.png`;
   fs.writeFileSync(
     imgLink,
     canvas.toBuffer("image/png")
   );
   let cidLink;
-  if(enableIPFS){
-    cidLink = await(getImageCidLink(canvas.toBuffer("image/png")));
+  if (enableIPFS) {
+    cidLink = await (getImageCidLink(canvas.toBuffer("image/png")));
   } else {
     cidLink = baseImageUri;
   }
@@ -47,7 +47,7 @@ const drawBackground = () => {
   ctx.fillRect(0, 0, width, height);
 };
 
-const addMetadata = async(_dna, _edition, _rarity, _cidLink) => {
+const addMetadata = async (_dna, _edition, _rarity, _cidLink) => {
   let dateTime = Date.now();
   // let tempMetadata = {
   //   id: `${_edition}`,
@@ -61,13 +61,13 @@ const addMetadata = async(_dna, _edition, _rarity, _cidLink) => {
   //   attributes: attributesList,
   // };
   let clanString = "";
-  if(_rarity == "tier_0"){
+  if (_rarity == "tier_0") {
     clanString = "Elder Vampire";
-  } else if(_rarity == "tier_1"){
+  } else if (_rarity == "tier_1") {
     clanString = "Nosferatu";
-  } else if(_rarity == "tier_2"){
+  } else if (_rarity == "tier_2") {
     clanString = "Predator";
-  } else if(_rarity == "tier_3"){
+  } else if (_rarity == "tier_3") {
     clanString = "Scavenger";
   } else {
     clanString = "Forgotten One";
@@ -75,34 +75,39 @@ const addMetadata = async(_dna, _edition, _rarity, _cidLink) => {
 
   attributesList.push(
     {
-      "display_type": "date", 
-      "trait_type": "Birthday", 
+      "display_type": "date",
+      "trait_type": "Birthday",
       "value": dateTime
     });
   attributesList.push(
     {
-      "display_type": "number", 
-      "trait_type": "Generation", 
-      "value": 1
+      "trait_type": "rarity",
+      "value": _rarity
     });
   attributesList.push(
-      {
-        "display_type": "number", 
-        "trait_type": "Identity Number", 
-        "value": _edition
-      });
+    {
+      "trait_type": "DNA",
+      "value": _dna.map(String)
+    });
+  attributesList.push(
+    {
+      "display_type": "number",
+      "trait_type": "Identity Number",
+      "value": _edition
+    });
   let tempMetadata = {
-    name: `${clanString} ${_edition}`,
     description: description,
+    external_url: "https://chainedvampires.com",
+    name: `${clanString} #${_edition}`,
     image: _cidLink,
     attributes: attributesList,
   };
   writeMetaData(tempMetadata, _edition);
   metadataList.push(tempMetadata);
   await testPinataConnection();
-  let ipfsCid = await(loadToIpfs(JSON.stringify(tempMetadata)));
+  let ipfsCid = await (loadToIpfs(JSON.stringify(tempMetadata)));
   console.log(ipfsCid);
-  await(cidToPinata(ipfsCid.path, tempMetadata));
+  await (cidToPinata(ipfsCid.path, tempMetadata));
   attributesList = [];
 };
 
@@ -143,7 +148,7 @@ const drawElement = (_element) => {
 const constructLayerToDna = (_dna = [], _layers = [], _rarity) => {
   let mappedDnaToLayers = _layers.map((layer, index) => {
     let selectedElement;
-    if(layer.name === "circle" || layer.name === "clothes" || layer.name === "hair") {
+    if (layer.name === "circle" || layer.name === "clothes" || layer.name === "hair") {
       selectedElement = layer.elements[_rarity][_dna[index]];
       selectedElement.layername = layer.name;
     } else {
@@ -183,10 +188,10 @@ const createDna = (_layers, _rarity) => {
   let randNum = [];
   _layers.forEach((layer) => {
     let num = 0;
-    if(layer.name === "circle" || layer.name === "clothes" || layer.name === "hair"){
+    if (layer.name === "circle" || layer.name === "clothes" || layer.name === "hair") {
       num = Math.floor(Math.random() * layer.elements[_rarity].length);
     } else {
-      num = Math.floor(Math.random() * layer.elements.length); 
+      num = Math.floor(Math.random() * layer.elements.length);
     }
     randNum.push(num);
   });
