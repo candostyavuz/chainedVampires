@@ -1,7 +1,7 @@
 require("dotenv").config();
 const { create } = require("ipfs-http-client");
-// const ipfs = create("https://localhost:5001");
-const ipfs = create("https://ipfs.infura.io:5001");
+const ipfs = create("/ip4/127.0.0.1/tcp/5001");
+// const ipfs = create("https://ipfs.infura.io:5001");
 const pinataSDK = require('@pinata/sdk');
 const pinata = pinataSDK(process.env.PINATA_KEY, process.env.PINATA_SECRET_KEY);
 let pinataIdCnt = 1;
@@ -37,13 +37,16 @@ async function cidToPinata(cid, tempMetadata){
         cidVersion: 0
     }
 };
+  let pinataURI;
   await pinata.pinByHash(cid, options).then((result) => {
-      console.log("pinByHash is successfull with id: " + result.id.toString() + "and ipfsHash: " + result.ipfsHash.toString());
-      console.log("Current pinata status: " + result.status.toString());
+      console.log("pinByHash is successfull with ipfsHash: " + result.ipfsHash.toString());
       pinataIdCnt++;
+      pinataURI = result.ipfsHash.toString()
   }).catch((err) => {
       console.log(err);
   });
+
+  return pinataURI;
 }
 
 module.exports = {

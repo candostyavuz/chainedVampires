@@ -13,11 +13,12 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ownable {
     using SafeMath for uint256;
+    using Strings for uint256;
     using Counters for Counters.Counter;    
     Counters.Counter private _tokenIdCounter;
 
     // Chained Vampires ERC-721 State Variables:
-    uint256 public constant MAX_VAMPIRES = 9999;
+    uint256 public constant MAX_VAMPIRES = 100;
     string private baseURI;
     uint256 private salePrice = 0.1 ether;
 
@@ -33,12 +34,13 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
         setBaseURI(_baseNftURI);  // Summon first vampire to deployer address
     }
 
-    function summonVampire(uint256 _amount) public payable whenNotPaused {
+    function summonVampire(uint256 _amount, string memory _tokenURI) public payable whenNotPaused {
         require(msg.value >= salePrice.mul(_amount), "Insufficient funds to fulfill the order");
         require(_amount < 21, "Can only summon maximum of 20 vampires per transaction");
         require((_tokenIdCounter.current()).add(_amount) <= MAX_VAMPIRES, "Amount exceeds remaining supply");
         for (uint256 i = 0; i < _amount; i++) {
             _safeMint(msg.sender, _tokenIdCounter.current());
+            _setTokenURI(_tokenIdCounter.current(), _tokenURI);
             minter[_tokenIdCounter.current()] = msg.sender;
             lastDividendAt[_tokenIdCounter.current()] = currentDividendPerHolder;
             _tokenIdCounter.increment();
@@ -133,6 +135,9 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
     /**
     * @dev GETTER FUNCTIONS
     */
+    function getCurrentTokenId() public view returns (uint256) {
+        return _tokenIdCounter.current();
+    } 
 
     function getAssetsOfWallet(address _walletAddr) public view returns (uint256[] memory)
     {
@@ -145,10 +150,9 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
         return assetsId;
     }
 
-    function tokenURI(uint256 _tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory)
-    {
-        return super.tokenURI(_tokenId);
-    }
+     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return ERC721URIStorage.tokenURI(tokenId);
+     }
 
     function getCurrentPrice() public view returns (uint256) {
         return salePrice;

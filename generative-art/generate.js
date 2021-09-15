@@ -27,11 +27,13 @@ const saveImage = async (_editionCount) => {
     canvas.toBuffer("image/png")
   );
   let cidLink;
+  console.log("here");
   if (enableIPFS) {
     cidLink = await (getImageCidLink(canvas.toBuffer("image/png")));
   } else {
     cidLink = baseImageUri;
   }
+  console.log("out");
   console.log("Image is uploaded to IPFS with CID: " + cidLink.toString());
   return cidLink;
 };
@@ -49,17 +51,7 @@ const drawBackground = () => {
 
 const addMetadata = async (_dna, _edition, _rarity, _cidLink) => {
   let dateTime = Date.now();
-  // let tempMetadata = {
-  //   id: `${_edition}`,
-  //   name: `vampire-${_edition}`,
-  //   dna: _dna.join(""),
-  //   description: description,
-  //   // image: `${baseImageUri}/${_edition}`,
-  //   image: _cidLink,
-  //   rarity: _rarity,
-  //   date: dateTime,
-  //   attributes: attributesList,
-  // };
+
   let clanString = "";
   if (_rarity == "tier_0") {
     clanString = "Elder Vampire";
@@ -103,11 +95,11 @@ const addMetadata = async (_dna, _edition, _rarity, _cidLink) => {
     attributes: attributesList,
   };
   writeMetaData(tempMetadata, _edition);
-  metadataList.push(tempMetadata);
   await testPinataConnection();
   let ipfsCid = await (loadToIpfs(JSON.stringify(tempMetadata)));
   console.log(ipfsCid);
-  await (cidToPinata(ipfsCid.path, tempMetadata));
+  let pinataCid = await (cidToPinata(ipfsCid.path, tempMetadata));
+  metadataList.push(pinataCid.toString());
   attributesList = [];
 };
 
@@ -203,13 +195,8 @@ const startCreating = async () => {
   writeAllMetaData("");
   let editionCount = startEditionFrom;
   while (editionCount <= endEditionAt) {
-    console.log(editionCount);
-
     let rarity = getRarity(editionCount);
-    console.log(rarity);
-
     let newDna = createDna(layers, rarity);
-    console.log(dnaList);
 
     if (isDnaUnique(dnaList, newDna)) {
       let results = constructLayerToDna(newDna, layers, rarity);
@@ -229,7 +216,6 @@ const startCreating = async () => {
       // signImage(`#${editionCount}`);
       let cidLink = await saveImage(editionCount);
       const res = await addMetadata(newDna, editionCount, rarity, cidLink);
-      console.log(`Created edition: ${editionCount} with DNA: ${newDna}`);
 
       dnaList.push(newDna);
       editionCount++;
