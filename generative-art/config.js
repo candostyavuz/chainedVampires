@@ -5,26 +5,26 @@ const dir = "./generative-art/vampireParts";
 const description = "9999 randomly generated Chained Vampires, devours $AVAX for their owner. First & only vampire legion of the decentralized metaverse, combining a unique collector experience with DAO dynamics. True on-chain pseudo-randomness makes a fair distribution of rare vampires among minters. Original minters earns passive income from following minting fees. Current owner gets share from whole market sale activity, directly into specified wallet. Rewards can be claimed anytime and are directly distributed as $AVAX.";
 const baseImageUri = "https://chainedvampires.com";
 const startEditionFrom = 1;
-const endEditionAt = 65;
+const endEditionAt = 100;
 const rarityWeights = [
   {
     value: "tier_0",
     from: 1,
-    to: 22,
+    to: 25,
   },
   {
     value: "tier_1",
-    from: 23,
-    to: 35,
+    from: 26,
+    to: 40,
   },
   {
     value: "tier_2",
-    from: 36,
-    to: 47,
+    from: 41,
+    to: 68,
   },
   {
     value: "tier_3",
-    from: 48,
+    from: 69,
     to: endEditionAt,
   },
 ];

@@ -33,13 +33,6 @@ async function main() {
   await chainedVampiresContract.connect(owner).summonVampire(1, uri, { value: ethers.utils.parseEther("0.2") });
   const uriAfter = await chainedVampiresContract.tokenURI(realID);
   console.log(uriAfter);
-  // const nonce = await signer0.getTransactionCount();
-  // for(let i = 0; i < friends.length; i++) {
-  //   const tokenURI = "ipfs://ipfs/QmYndekagu1tRbbPcxop1BhWz9BJ2kUgnXUEJbFu7G3ESE";
-  //   await nft.mintVampire(friends[i], tokenURI,  {
-  //     nonce: nonce + i
-  //   });
-  // }
 
   console.log("Minting is complete!");
 }
