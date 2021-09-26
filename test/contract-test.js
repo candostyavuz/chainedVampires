@@ -117,6 +117,7 @@ describe("Chained Vampires contract", function () {
             let currId = await Contract.getCurrentTokenId();
             let currUri = (metadataFile[currId]).toString();
 
+            // FIRST MINTER IS ADDR-1:
             let addr1 = await ethers.getSigner(1); 
             let initialEthBalance = await ethers.provider.getBalance(addr1.address);    // ETH balance of addr1 before it mints an NFT
             // addr1 mints only 1 NFT:
@@ -126,7 +127,8 @@ describe("Chained Vampires contract", function () {
             let addr1TokenID = await Contract.getAssetsOfWallet(addr1.address);
             console.log(ethers.BigNumber.from(addr1TokenID.toString()));
 
-            //addr2 is minting 19 editions!
+            // ADDR-2 IS MINTING 19 NFTS,
+            // WHICH SHOULD PAYS 10% TO ADDR1:
             let addr2 = await ethers.getSigner(2); 
 
             for(let i = 0 ; i < 20; i++) {
@@ -135,22 +137,21 @@ describe("Chained Vampires contract", function () {
                 await Contract.connect(addr2).summonVampire(1, currUri, {value: ethers.utils.parseEther("1.0")});
             }
 
-            // add1 claims her rewards!
+            // ADDR-1 CLAIMS HIS REWARDS!
             await Contract.connect(addr1).claimReward(ethers.BigNumber.from(addr1TokenID.toString()));
             let lastBalance1 = await ethers.provider.getBalance(addr1.address);
 
             assert.isAbove(lastBalance1, balanceAfterMint);
 
             console.log({
-                initial: ethers.utils.formatEther(initialEthBalance),
-                afterMint: ethers.utils.formatEther(balanceAfterMint),
-                last: ethers.utils.formatEther(lastBalance1)
+                afterMintBalance: ethers.utils.formatEther(balanceAfterMint),
+                claimedBalance: ethers.utils.formatEther(lastBalance1)
             });
 
-            // Continue earning that passive income boy!
+            // Continue earning that passive income!
 
             // addr3 comes in
-            addr3 = await ethers.getSigner(3); 
+            let addr3 = await ethers.getSigner(3); 
 
             for(let i = 0 ; i < 10; i++) {
                 currId = await Contract.getCurrentTokenId();
@@ -162,7 +163,7 @@ describe("Chained Vampires contract", function () {
             console.log("After addr3: " + ethers.utils.formatEther(currentAddr1Reward).toString());
 
             // addr4 comes in
-            addr4 = await ethers.getSigner(4); 
+            let addr4 = await ethers.getSigner(4); 
 
             for(let i = 0 ; i < 10; i++) {
                 currId = await Contract.getCurrentTokenId();

@@ -15,18 +15,51 @@ const {
 const console = require("console");
 const canvas = createCanvas(width, height);
 const ctx = canvas.getContext("2d");
+
 var metadataList = [];
+
 var attributesList = [];
 var dnaList = [];
 
-const saveImage = async (_editionCount, _rarity) => {
-  let imgLink = `./generative-art/output/image/${_editionCount}.png`;
-  fs.writeFileSync(
-    imgLink,
-    canvas.toBuffer("image/png")
-  );
-  console.log("New vampire has been generated with the rarity of: " + _rarity);
+var nftBuffer = [];
+
+const saveNFT = async (_metadata) => {
+  let NFTobj = {
+    image: canvas.toBuffer("image/png"),
+    metadata: JSON.stringify(_metadata)
+  };
+  nftBuffer.push(NFTobj) ;
+  console.log("New nft object has been added")
 };
+
+const shuffleAll = () => {
+  let currIdx = nftBuffer.length;
+  let randIdx;
+
+  while(currIdx != 0) {
+      randIdx = Math.floor(Math.random() * currIdx);
+      currIdx--;
+      [nftBuffer[currIdx], nftBuffer[randIdx]] = [nftBuffer[randIdx], nftBuffer[currIdx]];
+  }
+  return nftBuffer;
+};
+
+const saveAll = async () => {
+  let imgDir = "";
+  let metaDir = "";
+
+  for(let i = 0; i < nftBuffer.length; i++)
+  {
+    console.log("Saving Image");
+    imgDir = `./generative-art/output/image/${i}.png`;
+    fs.writeFileSync(imgDir, (nftBuffer[i].image));
+
+    console.log("Saving Metadata");
+    metaDir = `./generative-art/output/metadata/${i}.json`;
+    fs.writeFileSync(metaDir, nftBuffer[i].metadata);
+  };
+  console.log("NFT's have been generated and saved successfully!");
+}
 
 const genColor = () => {
   let hue = Math.floor(Math.random() * 360);
@@ -86,11 +119,13 @@ const addMetadata = async (_dna, _edition, _rarity) => {
   let tempMetadata = {
     description: description,
     external_url: "https://chainedvampires.com",
-    name: `${clanString} #${_edition}`,
+    // name: `${clanString} #${_edition}`,
+    name: `${clanString}`,
     image: baseImageUri,
     attributes: attributesList,
   };
-  writeMetaData(tempMetadata, _edition);
+  // writeMetaData(tempMetadata, _edition);
+  await saveNFT(tempMetadata);
 
   metadataList.push(tempMetadata);
   attributesList = [];
@@ -205,7 +240,7 @@ const startCreating = async () => {
         });
       });
       // signImage(`#${editionCount}`);
-      await saveImage(editionCount,rarity);
+      // await saveImage(editionCount);
       const res = await addMetadata(newDna, editionCount, rarity);
 
       dnaList.push(newDna);
@@ -214,11 +249,9 @@ const startCreating = async () => {
       console.log("DNA exists!");
     }
   }
+  shuffleAll();
+  await saveAll();
   writeAllMetaData(JSON.stringify(metadataList));
 };
 
 startCreating();
-
-module.exports = {
-  metadataList
-};
