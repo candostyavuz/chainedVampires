@@ -5,9 +5,9 @@ const dir = "./generative-art/vampireParts";
 const description = "9999 randomly generated Chained Vampires, hunts $AVAX for their owner. First & only vampire legion of the decentralized metaverse, combining a unique collector experience with passive income dynamics. Rewards can be claimed anytime and are directly distributed as $AVAX.";
 const baseImageUri = "ipfs://";
 const startEditionFrom = 1;
-const endEditionAt = 20;
+const endEditionAt = 5;
 
-const vampGender = "male";  //"male";
+const vampGender_male = "male"; 
 
 const rarityWeights = [
   {
@@ -53,7 +53,7 @@ const layers = [
   {
     id: 1,
     name: "background",
-    elements: getElements(`${dir}/${vampGender}/1-background/`),
+    elements: getElements(`${dir}/${vampGender_male}/1-background/`),
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
   },
@@ -61,10 +61,10 @@ const layers = [
     id: 2,
     name: "circle",
     elements: {
-      tier_3: getElements(`${dir}/${vampGender}/2-circle/tier-3/`),
-      tier_2: getElements(`${dir}/${vampGender}/2-circle/tier-2/`),
-      tier_1: getElements(`${dir}/${vampGender}/2-circle/tier-1/`),
-      tier_0: getElements(`${dir}/${vampGender}/2-circle/tier-0/`),
+      tier_3: getElements(`${dir}/${vampGender_male}/2-circle/tier-3/`),
+      tier_2: getElements(`${dir}/${vampGender_male}/2-circle/tier-2/`),
+      tier_1: getElements(`${dir}/${vampGender_male}/2-circle/tier-1/`),
+      tier_0: getElements(`${dir}/${vampGender_male}/2-circle/tier-0/`),
     },
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
@@ -72,35 +72,35 @@ const layers = [
   {
     id: 3,
     name: "body",
-    elements: getElements(`${dir}/${vampGender}/3-body/`),
+    elements: getElements(`${dir}/${vampGender_male}/3-body/`),
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
   },
   {
     id: 4,
     name: "eye",
-    elements: getElements(`${dir}/${vampGender}/4-eye/`),
+    elements: getElements(`${dir}/${vampGender_male}/4-eye/`),
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
   },
   {
     id: 5,
     name: "forehead",
-    elements: getElements(`${dir}/${vampGender}/4-forehead/`),
+    elements: getElements(`${dir}/${vampGender_male}/4-forehead/`),
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
   },
   {
     id: 6,
     name: "mouth",
-    elements: getElements(`${dir}/${vampGender}/4-mouth/`),
+    elements: getElements(`${dir}/${vampGender_male}/4-mouth/`),
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
   },
   {
     id: 7,
     name: "nose",
-    elements: getElements(`${dir}/${vampGender}/4-nose/`),
+    elements: getElements(`${dir}/${vampGender_male}/4-nose/`),
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
   },
@@ -108,10 +108,10 @@ const layers = [
     id: 8,
     name: "clothes",
     elements: {
-      tier_3: getElements(`${dir}/${vampGender}/5-clothes/tier-3/`),
-      tier_2: getElements(`${dir}/${vampGender}/5-clothes/tier-2/`),
-      tier_1: getElements(`${dir}/${vampGender}/5-clothes/tier-1/`),
-      tier_0: getElements(`${dir}/${vampGender}/5-clothes/tier-0/`),
+      tier_3: getElements(`${dir}/${vampGender_male}/5-clothes/tier-3/`),
+      tier_2: getElements(`${dir}/${vampGender_male}/5-clothes/tier-2/`),
+      tier_1: getElements(`${dir}/${vampGender_male}/5-clothes/tier-1/`),
+      tier_0: getElements(`${dir}/${vampGender_male}/5-clothes/tier-0/`),
     },
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
@@ -119,21 +119,21 @@ const layers = [
   {
     id: 9,
     name: "accessory",
-    elements: getElements(`${dir}/${vampGender}/5-earring/`),
+    elements: getElements(`${dir}/${vampGender_male}/5-earring/`),
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
   },
   {
     id: 10,
     name: "accessorytwo",
-    elements: getElements(`${dir}/${vampGender}/5-glasses/`),
+    elements: getElements(`${dir}/${vampGender_male}/5-glasses/`),
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
   },
   {
     id: 11,
     name: "accessorytwo",
-    elements: getElements(`${dir}/${vampGender}/5-necklace/`),
+    elements: getElements(`${dir}/${vampGender_male}/5-necklace/`),
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
   },
@@ -141,10 +141,10 @@ const layers = [
     id: 12,
     name: "hair",
     elements: {
-      tier_3: getElements(`${dir}/${vampGender}/6-hair/tier-3/`),
-      tier_2: getElements(`${dir}/${vampGender}/6-hair/tier-2/`),
-      tier_1: getElements(`${dir}/${vampGender}/6-hair/tier-1/`),
-      tier_0: getElements(`${dir}/${vampGender}/6-hair/tier-0/`),
+      tier_3: getElements(`${dir}/${vampGender_male}/6-hair/tier-3/`),
+      tier_2: getElements(`${dir}/${vampGender_male}/6-hair/tier-2/`),
+      tier_1: getElements(`${dir}/${vampGender_male}/6-hair/tier-1/`),
+      tier_0: getElements(`${dir}/${vampGender_male}/6-hair/tier-0/`),
     },
     position: { x: 0, y: 0 },
     size: { width: width, height: height },
@@ -160,5 +160,4 @@ module.exports = {
   startEditionFrom,
   endEditionAt,
   rarityWeights,
-  vampGender
 };

@@ -1,6 +1,7 @@
 require("dotenv").config();
 const fs = require("fs");
 const { createCanvas, loadImage } = require("canvas");
+
 const {
   layers,
   width,
@@ -10,36 +11,50 @@ const {
   startEditionFrom,
   endEditionAt,
   rarityWeights,
-  vampGender
-} = require("./config.js");
+} = require("./config_male.js");
+
+const {
+  layers_female,
+  startEditionFrom_female,
+  endEditionAt_female,
+  rarityWeights_female,
+} = require("./config_female.js");
+
+let genderStr;  // Determines the gender of current creation
+
 const console = require("console");
 const canvas = createCanvas(width, height);
 const ctx = canvas.getContext("2d");
 
-var metadataList = [];
-
 var attributesList = [];
 var dnaList = [];
+var dnaListFemale = [];
 
 var nftBuffer = [];
+let metadataArr = [];
 
 const saveNFT = async (_metadata) => {
   let NFTobj = {
     image: canvas.toBuffer("image/png"),
-    metadata: JSON.stringify(_metadata)
+    metadata: _metadata
   };
-  nftBuffer.push(NFTobj) ;
+  nftBuffer.push(NFTobj);
   console.log("New nft object has been added")
 };
 
 const shuffleAll = () => {
   let currIdx = nftBuffer.length;
   let randIdx;
+  let temp;
+  while (currIdx != 0) {
+    randIdx = Math.floor(Math.random() * currIdx);
+    currIdx--;
 
-  while(currIdx != 0) {
-      randIdx = Math.floor(Math.random() * currIdx);
-      currIdx--;
-      [nftBuffer[currIdx], nftBuffer[randIdx]] = [nftBuffer[randIdx], nftBuffer[currIdx]];
+    temp = nftBuffer[currIdx].metadata.edition;
+    nftBuffer[currIdx].metadata.edition = nftBuffer[randIdx].metadata.edition;
+    nftBuffer[randIdx].metadata.edition = temp;
+
+    [nftBuffer[currIdx], nftBuffer[randIdx]] = [nftBuffer[randIdx], nftBuffer[currIdx]];
   }
   return nftBuffer;
 };
@@ -47,16 +62,16 @@ const shuffleAll = () => {
 const saveAll = async () => {
   let imgDir = "";
   let metaDir = "";
-
-  for(let i = 0; i < nftBuffer.length; i++)
-  {
+  for (let i = 0; i < nftBuffer.length; i++) {
     console.log("Saving Image");
-    imgDir = `./generative-art/output/image/${i}.png`;
+    imgDir = `./generative-art/output/image/${i+1}.png`;
     fs.writeFileSync(imgDir, (nftBuffer[i].image));
 
     console.log("Saving Metadata");
-    metaDir = `./generative-art/output/metadata/${i}.json`;
-    fs.writeFileSync(metaDir, nftBuffer[i].metadata);
+    metaDir = `./generative-art/output/metadata/${i+1}.json`;
+    fs.writeFileSync(metaDir, JSON.stringify(nftBuffer[i].metadata));
+
+    metadataArr.push(nftBuffer[i].metadata);
   };
   console.log("NFT's have been generated and saved successfully!");
 }
@@ -101,10 +116,10 @@ const addMetadata = async (_dna, _edition, _rarity) => {
       "value": dateTime
     });
   attributesList.push(
-      {
-        "trait_type": "Gender",
-        "value": vampGender.toString()
-      });
+    {
+      "trait_type": "Gender",
+      "value": genderStr.toString()
+    });
   attributesList.push(
     {
       "trait_type": "Rarity",
@@ -121,13 +136,12 @@ const addMetadata = async (_dna, _edition, _rarity) => {
     external_url: "https://chainedvampires.com",
     // name: `${clanString} #${_edition}`,
     name: `${clanString}`,
-    image: baseImageUri,
+    image: `${baseImageUri}`,
+    edition: `${_edition}`,
     attributes: attributesList,
   };
   // writeMetaData(tempMetadata, _edition);
   await saveNFT(tempMetadata);
-
-  metadataList.push(tempMetadata);
   attributesList = [];
 };
 
@@ -135,8 +149,8 @@ const writeMetaData = (_data, _edition) => {
   fs.writeFileSync(`./generative-art/output/metadata/${_edition}.json`, JSON.stringify(_data));
 };
 
-const writeAllMetaData = (_data) => {
-  fs.writeFileSync("./generative-art/output/metadata/_allmetadata.json", _data);
+const writeAllMetaData = () => {
+  fs.writeFileSync("./generative-art/output/metadata/_allmetadata.json", JSON.stringify(metadataArr));
 };
 
 const addAttributes = (_element) => {
@@ -188,14 +202,26 @@ const constructLayerToDna = (_dna = [], _layers = [], _rarity) => {
 
 const getRarity = (_editionCount) => {
   let rarity = "";
-  rarityWeights.forEach((rarityWeight) => {
-    if (
-      _editionCount >= rarityWeight.from &&
-      _editionCount <= rarityWeight.to
-    ) {
-      rarity = rarityWeight.value;
-    }
-  });
+  if (genderStr === "male") {
+    rarityWeights.forEach((rarityWeight) => {
+      if (
+        _editionCount >= rarityWeight.from &&
+        _editionCount <= rarityWeight.to
+      ) {
+        rarity = rarityWeight.value;
+      }
+    });
+  } else {
+    rarityWeights_female.forEach((rarityWeight) => {
+      if (
+        _editionCount >= rarityWeight.from &&
+        _editionCount <= rarityWeight.to
+      ) {
+        rarity = rarityWeight.value;
+      }
+    });
+  }
+
   return rarity;
 };
 
@@ -219,6 +245,8 @@ const createDna = (_layers, _rarity) => {
 };
 
 const startCreating = async () => {
+  // Male Vampire Creation
+  genderStr = "male";
   let editionCount = startEditionFrom;
   while (editionCount <= endEditionAt) {
     let rarity = getRarity(editionCount);
@@ -239,8 +267,6 @@ const startCreating = async () => {
           drawElement(element);
         });
       });
-      // signImage(`#${editionCount}`);
-      // await saveImage(editionCount);
       const res = await addMetadata(newDna, editionCount, rarity);
 
       dnaList.push(newDna);
@@ -249,9 +275,42 @@ const startCreating = async () => {
       console.log("DNA exists!");
     }
   }
+
+  // Female Vampire Creation:
+  genderStr = "female";
+  let editionCountFemale = startEditionFrom_female;
+  while (editionCountFemale <= endEditionAt_female) {
+    let rarity = getRarity(editionCountFemale);
+    let newDna = createDna(layers_female, rarity);
+
+    if (isDnaUnique(dnaListFemale, newDna)) {
+      let results = constructLayerToDna(newDna, layers_female, rarity);
+      let loadedElements = []; //promise array
+
+      results.forEach((layer) => {
+        loadedElements.push(loadLayerImg(layer));
+      });
+
+      await Promise.all(loadedElements).then((elementArray) => {
+        ctx.clearRect(0, 0, width, height);
+        drawBackground();
+        elementArray.forEach((element) => {
+          drawElement(element);
+        });
+      });
+      const res = await addMetadata(newDna, editionCount, rarity);
+
+      dnaListFemale.push(newDna);
+      editionCountFemale++;
+      editionCount++;
+    } else {
+      console.log("DNA exists!");
+    }
+  }
   shuffleAll();
   await saveAll();
-  writeAllMetaData(JSON.stringify(metadataList));
+
+  writeAllMetaData();
 };
 
 startCreating();
