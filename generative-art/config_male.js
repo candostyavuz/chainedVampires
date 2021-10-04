@@ -5,7 +5,7 @@ const dir = "./generative-art/vampireParts";
 const description = "9999 randomly generated Chained Vampires, hunts $AVAX for their owner. First & only vampire legion of the decentralized metaverse, combining a unique collector experience with passive income dynamics. Rewards can be claimed anytime and are directly distributed as $AVAX.";
 const baseImageUri = "ipfs://";
 const startEditionFrom = 1;
-const endEditionAt = 5;
+const endEditionAt = 20;
 
 const vampGender_male = "male"; 
 

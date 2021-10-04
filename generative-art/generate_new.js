@@ -33,13 +33,13 @@ var dnaListFemale = [];
 var nftBuffer = [];
 let metadataArr = [];
 
-const saveNFT = async (_metadata) => {
+const saveNFT = async (_metadata, _dna) => {
   let NFTobj = {
     image: canvas.toBuffer("image/png"),
     metadata: _metadata
   };
   nftBuffer.push(NFTobj);
-  console.log("New nft object has been added")
+  console.log("New nft object has been added with DNA: " + _dna);
 };
 
 const shuffleAll = () => {
@@ -63,12 +63,12 @@ const saveAll = async () => {
   let imgDir = "";
   let metaDir = "";
   for (let i = 0; i < nftBuffer.length; i++) {
-    console.log("Saving Image");
-    imgDir = `./generative-art/output/image/${i+1}.png`;
+    console.log("Saving Image no: " + nftBuffer[i].metadata.edition);
+    imgDir = `./generative-art/output/image/${nftBuffer[i].metadata.edition}.png`;
     fs.writeFileSync(imgDir, (nftBuffer[i].image));
 
-    console.log("Saving Metadata");
-    metaDir = `./generative-art/output/metadata/${i+1}.json`;
+    console.log("Saving Metadata: " + nftBuffer[i].metadata.edition);
+    metaDir = `./generative-art/output/metadata/${nftBuffer[i].metadata.edition}.json`;
     fs.writeFileSync(metaDir, JSON.stringify(nftBuffer[i].metadata));
 
     metadataArr.push(nftBuffer[i].metadata);
@@ -141,7 +141,7 @@ const addMetadata = async (_dna, _edition, _rarity) => {
     attributes: attributesList,
   };
   // writeMetaData(tempMetadata, _edition);
-  await saveNFT(tempMetadata);
+  await saveNFT(tempMetadata, _dna.map(String));
   attributesList = [];
 };
 
