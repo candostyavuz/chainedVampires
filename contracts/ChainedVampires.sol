@@ -3,23 +3,19 @@ pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-// import "hardhat/console.sol";
-
-contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ownable {
-    using SafeMath for uint256;
+contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
+    using Counters for Counters.Counter;
     using Strings for uint256;
-    using Counters for Counters.Counter;    
     Counters.Counter private _tokenIdCounter;
 
-    // Chained Vampires ERC-721 State Variables:
-    uint256 public constant MAX_VAMPIRES = 100;
-    string private baseURI;
+    // State variables
+    uint256 public constant MAX_VAMPIRES = 40;
+    string public baseURI;
+    string public baseExtension = ".json";
+    bool public paused = false;
     uint256 private salePrice = 0.1 ether;
 
     // Tokenomic State Variables:
@@ -28,19 +24,21 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
     mapping(uint256 => uint256) public lastDividendAt; // tokenId to deserved profit for its owner
     mapping(uint256 => address) public minter; // tokenId to minter address
 
-    receive() external payable {}
-
-    constructor(string memory _baseNftURI) ERC721("ChainedVampires", "VAMP") {
-        setBaseURI(_baseNftURI);  // Summon first vampire to deployer address
+    constructor(string memory _initBaseURI) ERC721("ChainedVampires", "CVAMP") {
+        setBaseURI(_initBaseURI);
     }
 
-    function summonVampire(uint256 _amount, string memory _tokenURI) public payable whenNotPaused {
-        require(msg.value >= salePrice.mul(_amount), "Insufficient funds to fulfill the order");
-        require(_amount < 21, "Can only summon maximum of 20 vampires per transaction");
-        require((_tokenIdCounter.current()).add(_amount) <= MAX_VAMPIRES, "Amount exceeds remaining supply");
+    function summonVampire(uint256 _amount) public payable {
+        require(!paused, "Sale must be active!");
+        require(msg.value >= salePrice * _amount, "Insufficient funds!");
+        require(_amount > 0, "Amount must be bigger than zero!");
+        require(_amount < 21, "Max 20 vamps can be minted in one order!");
+        require(
+            _tokenIdCounter.current() + _amount <= MAX_VAMPIRES,
+            "Amount exceeds remaining supply!"
+        );
         for (uint256 i = 0; i < _amount; i++) {
             _safeMint(msg.sender, _tokenIdCounter.current());
-            _setTokenURI(_tokenIdCounter.current(), _tokenURI);
             minter[_tokenIdCounter.current()] = msg.sender;
             lastDividendAt[_tokenIdCounter.current()] = currentDividendPerHolder;
             _tokenIdCounter.increment();
@@ -48,22 +46,49 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
         }
     }
 
-    //////////////////////////////////////////////////////////////////
-    /**
-     * @dev TOKENOMICS FUNCTIONS
-     */
+    function walletOfOwner(address _owner)
+        public
+        view
+        returns (uint256[] memory)
+    {
+        uint256 ownerTokenCount = balanceOf(_owner);
+        uint256[] memory tokenIds = new uint256[](ownerTokenCount);
+        for (uint256 i; i < ownerTokenCount; i++) {
+            tokenIds[i] = tokenOfOwnerByIndex(_owner, i);
+        }
+        return tokenIds;
+    }
 
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI query for nonexistent token"
+        );
+
+        string memory currentBaseURI = _baseURI();
+        return bytes(currentBaseURI).length > 0
+                ? string(abi.encodePacked(currentBaseURI, tokenId.toString(), baseExtension))
+                : "";
+    }
+
+    // Tokenomics
     function distributeMintFee(uint256 _revenue) private {
-        uint256 toHolders = _revenue.div(10); // 10% is distributed among holders
-        uint256 toContract = _revenue.sub(toHolders);
+        uint256 toHolders = _revenue / 10; // 10% is distributed among holders
+        uint256 toContract = _revenue - toHolders;
         payable(address(this)).transfer(toContract);
 
         totalHolderBalance += toHolders; // Updatede total distributed revenue
-        currentDividendPerHolder += toHolders.div(totalSupply()); // Dividend for current holders
+        currentDividendPerHolder += toHolders / totalSupply(); // Dividend for current holders
     }
 
     function getEarnedAmount(uint256 _tokenId) public view returns (uint256) {
-        return currentDividendPerHolder.sub(lastDividendAt[_tokenId]);
+        return currentDividendPerHolder - lastDividendAt[_tokenId];
     }
 
     function claimReward(uint256 _tokenId) public {
@@ -81,9 +106,6 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
         lastDividendAt[_tokenId] = currentDividendPerHolder;
     }
 
-    /**
-     * @dev Returns the total reward balance for all NFTs that caller owns
-     */
     function getEarnedAmountAll() public view returns (uint256) {
         uint256 tokenCount = balanceOf(msg.sender);
         uint256 totalReward = 0;
@@ -104,84 +126,44 @@ contract ChainedVampires is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable
         }
         payable(msg.sender).transfer(totalReward);
     }
-
-    //////////////////////////////////////////////////////////////////
-    /**
-    * @dev ONLY OWNER FUNCTIONS
-    */
-
-    // ERC721URIStorage
-    function setTokenURI(uint256 tokenId, string memory _tokenURI) external onlyOwner {
-        _setTokenURI(tokenId, _tokenURI);
+    
+    // Only Owner
+    function setBaseURI(string memory _newBaseURI) public onlyOwner {
+        baseURI = _newBaseURI;
     }
 
-    function pause() public onlyOwner {
-        _pause();
-    }
-
-    function unpause() public onlyOwner {
-        _unpause();
+    function pause(bool _state) public onlyOwner {
+        paused = _state;
     }
 
     function withdraw() external onlyOwner {
         payable(msg.sender).transfer(address(this).balance);
     }
 
-    function setBaseURI(string memory _baseNftURI) public onlyOwner {
-        baseURI = _baseNftURI;
-    }
-
-    //////////////////////////////////////////////////////////////////
-    /**
-    * @dev GETTER FUNCTIONS
-    */
+    // Getters
     function getCurrentTokenId() public view returns (uint256) {
         return _tokenIdCounter.current();
-    } 
-
-    function getAssetsOfWallet(address _walletAddr) public view returns (uint256[] memory)
-    {
-        uint256 assetCount = balanceOf(_walletAddr);
-
-        uint256[] memory assetsId = new uint256[](assetCount);
-        for (uint256 i = 0; i < assetCount; i++) {
-            assetsId[i] = tokenOfOwnerByIndex(_walletAddr, i);
-        }
-        return assetsId;
-    }
-
-     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        return ERC721URIStorage.tokenURI(tokenId);
-     }
-
-    function getCurrentPrice() public view returns (uint256) {
-        return salePrice;
     }
 
     function getOriginalMinter(uint256 _tokenId) public view returns (address) {
         return minter[_tokenId];
     }
 
-    function _baseURI() internal view virtual override returns (string memory) {
-        return baseURI;
-    }
-
-    /**
-     * @notice - OPENZEPPELIN ZONE - Do Not Disturb!
-     */
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal override(ERC721, ERC721Enumerable) whenNotPaused {
+    // The following functions are overrides required by Solidity.
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override(ERC721, ERC721Enumerable) {
         super._beforeTokenTransfer(from, to, tokenId);
     }
- 
-    // See {IERC165-supportsInterface}.
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721Enumerable) returns (bool)
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, ERC721Enumerable)
+        returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }
-
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage)
-    {
-        super._burn(tokenId);
-    }
-
 }
