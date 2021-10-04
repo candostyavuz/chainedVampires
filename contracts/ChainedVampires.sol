@@ -24,6 +24,8 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     mapping(uint256 => uint256) public lastDividendAt; // tokenId to deserved profit for its owner
     mapping(uint256 => address) public minter; // tokenId to minter address
 
+    receive() external payable {}
+
     constructor(string memory _initBaseURI) ERC721("ChainedVampires", "CVAMP") {
         setBaseURI(_initBaseURI);
     }
