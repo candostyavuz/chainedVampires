@@ -9,32 +9,23 @@ const friends = [
   "0x8Fbbe7B6741e3E9Ab7C8545f42Fa0830A8A4C9D8"   // Account-5 on Mozilla
 ];
 
-const existingContractAddr = "0x511ea2C1098e2c578e3b861456ac9d949e0753f8";
+const existingContractAddr = "0x684C5474c803389DEaec00f014d8D9F4540166F0";
 let uriIdx = 0;
 
 async function main() {
   const chainedVampiresContract = await hre.ethers.getContractAt("ChainedVampires", existingContractAddr);
-
-  // mint
   const owner = await ethers.provider.getSigner("0x95c5bDD933BE67a9fF67a5DD9aE9dd440b2604dB");
   //const signer0 = await ethers.provider.getSigner(friends[2]);
 
-  const tokenId = await chainedVampiresContract.getCurrentTokenId();
-  const id = ethers.BigNumber.from(tokenId.toString());
-  let realID = parseInt(tokenId.toString());
-  realID = realID - 1;
-  realID = ethers.BigNumber.from(realID.toString());
-  console.log(tokenId.toString());
+  await chainedVampiresContract.connect(owner).summonVampire(1, { value: ethers.utils.parseEther("0.2") });
 
-  const tokenURI = metadataFile[parseInt(tokenId.toString())];
-  uri = tokenURI.toString();
-  console.log(uri);
-
-  await chainedVampiresContract.connect(owner).summonVampire(1, uri, { value: ethers.utils.parseEther("0.2") });
-  const uriAfter = await chainedVampiresContract.tokenURI(realID);
-  console.log(uriAfter);
-
-  console.log("Minting is complete!");
+  let currId = await chainedVampiresContract.connect(owner).getCurrentTokenId();
+  console.log(currId.toString());
+  let intID = parseInt(currId) - 1;
+  console.log("Int ID: " + intID.toString());
+  let uri = await chainedVampiresContract.connect(owner).tokenURI(ethers.BigNumber.from(intID.toString()));
+  
+  console.log("Minting is complete with URI:" + uri.toString());
 }
 
 main()

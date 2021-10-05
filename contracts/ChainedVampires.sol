@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     using Counters for Counters.Counter;
     using Strings for uint256;
+    
     Counters.Counter private _tokenIdCounter;
 
     // State variables
@@ -24,7 +25,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     mapping(uint256 => uint256) public lastDividendAt; // tokenId to deserved profit for its owner
     mapping(uint256 => address) public minter; // tokenId to minter address
 
-    receive() external payable {}
+    receive() external payable {}   
 
     constructor(string memory _initBaseURI) ERC721("ChainedVampires", "CVAMP") {
         setBaseURI(_initBaseURI);
@@ -150,6 +151,12 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     function getOriginalMinter(uint256 _tokenId) public view returns (address) {
         return minter[_tokenId];
     }
+
+      // internal
+    function _baseURI() internal view virtual override returns (string memory) {
+        return baseURI;
+    }
+
 
     // The following functions are overrides required by Solidity.
     function _beforeTokenTransfer(

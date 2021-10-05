@@ -2,7 +2,7 @@ const fs = require("fs");
 const width = 1000;
 const height = 1000;
 const dir = "./generative-art/vampireParts";
-const startEditionFrom_female = 1;
+const startEditionFrom_female = 0;
 const endEditionAt_female = 20;
 
 const vampGender_female = "female";  //"male";
@@ -10,7 +10,7 @@ const vampGender_female = "female";  //"male";
 const rarityWeights_female = [
   {
     value: "tier_0",
-    from: 1,
+    from: 0,
     to: 3,
   },
   {

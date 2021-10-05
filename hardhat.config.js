@@ -8,6 +8,7 @@ module.exports = {
     rinkeby: {
       url: process.env.RINKEBY_URL,
       accounts: [process.env.PRIVATE_KEY]
+      // timeout: 120000
     }
   },
   etherscan: {
