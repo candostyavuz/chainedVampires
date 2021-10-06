@@ -17,23 +17,24 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     string public baseURI;
     string public baseExtension = ".json";
     bool public paused = false;
-    uint256 private salePrice = 0.1 ether;
-
+    uint256 private salePrice = 200000000000000000; // 0.2 AVAX
+    address private _admin;
     // Tokenomic State Variables:
     uint256 public totalHolderBalance = 0; // Total profit to be distributed to nft holders
     uint256 public currentDividendPerHolder = 0; // Current dividend obtained from minting of a new NFT
     mapping(uint256 => uint256) public lastDividendAt; // tokenId to deserved profit for its owner
     mapping(uint256 => address) public minter; // tokenId to minter address
 
-    receive() external payable {}   
+    // receive() external payable {}   
 
-    constructor(string memory _initBaseURI) ERC721("ChainedVampires", "CVAMP") {
+    constructor(string memory _initBaseURI, address admin) ERC721("ChainedVampires", "CVAMP") {
         setBaseURI(_initBaseURI);
+        _admin = admin;
     }
 
     function summonVampire(uint256 _amount) public payable {
         require(!paused, "Sale must be active!");
-        require(msg.value >= salePrice * _amount, "Insufficient funds!");
+        require(msg.value == salePrice * _amount, "Insufficient funds!");
         require(_amount > 0, "Amount must be bigger than zero!");
         require(_amount < 21, "Max 20 vamps can be minted in one order!");
         require(
@@ -41,7 +42,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
             "Amount exceeds remaining supply!"
         );
         for (uint256 i = 0; i < _amount; i++) {
-            _safeMint(msg.sender, _tokenIdCounter.current());
+            _mint(msg.sender, _tokenIdCounter.current());
             minter[_tokenIdCounter.current()] = msg.sender;
             lastDividendAt[_tokenIdCounter.current()] = currentDividendPerHolder;
             _tokenIdCounter.increment();
@@ -82,12 +83,12 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
 
     // Tokenomics
     function distributeMintFee(uint256 _revenue) private {
-        uint256 toHolders = _revenue / 10; // 10% is distributed among holders
-        uint256 toContract = _revenue - toHolders;
-        payable(address(this)).transfer(toContract);
+        uint256 holderShare = _revenue / 10; // 10% is distributed among holders
+        uint256 contractShare = _revenue - holderShare;
+        payable(_admin).transfer(contractShare);
 
-        totalHolderBalance += toHolders; // Updatede total distributed revenue
-        currentDividendPerHolder += toHolders / totalSupply(); // Dividend for current holders
+        totalHolderBalance += holderShare; // Updatede total distributed revenue
+        currentDividendPerHolder += holderShare / totalSupply(); // Dividend for current holders
     }
 
     function getEarnedAmount(uint256 _tokenId) public view returns (uint256) {

@@ -3,15 +3,15 @@ const hre = require("hardhat");
 
 async function main() {
 
-  let baseURI = "ipfs://QmZZ5vJ8f2TeMaicR7By4SJBWAVtj5cpoR8F6NsV5aotBz/";
+  let admin = "0x9a8C9C02cB9f56bEEB2F20Fe88e615EB8553dC75";
+  let baseURI = "ipfs://QmYdiBATiBFoLA6gmnn2RzzmRomm6L4qg6SBzftzsC9uZd/";
 
   const ChainedVampires = await hre.ethers.getContractFactory("ChainedVampires");
-  const chainedvampires = await ChainedVampires.deploy(baseURI);
+  const chainedvampires = await ChainedVampires.deploy(baseURI, admin);
 
   await chainedvampires.deployed();
 
   console.log("ChainedVampires deployed to:", chainedvampires.address);
-  // ChainedVampires deployed to: 0x684C5474c803389DEaec00f014d8D9F4540166F0
 }
 
 main()

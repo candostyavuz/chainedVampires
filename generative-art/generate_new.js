@@ -69,6 +69,7 @@ const saveAll = async () => {
 
     console.log("Saving Metadata: " + nftBuffer[i].metadata.edition);
     metaDir = `./generative-art/output/metadata/${nftBuffer[i].metadata.edition}.json`;
+    nftBuffer[i].metadata.name += ` #${nftBuffer[i].metadata.edition}`;
     fs.writeFileSync(metaDir, JSON.stringify(nftBuffer[i].metadata));
 
     metadataArr.push(nftBuffer[i].metadata);

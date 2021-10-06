@@ -1,4 +1,3 @@
-const metadataFile = require('../demo-metadata.json'); //with path
 const { ethers } = require("hardhat");
 
 const friends = [
@@ -9,23 +8,22 @@ const friends = [
   "0x8Fbbe7B6741e3E9Ab7C8545f42Fa0830A8A4C9D8"   // Account-5 on Mozilla
 ];
 
-const existingContractAddr = "0x684C5474c803389DEaec00f014d8D9F4540166F0";
-let uriIdx = 0;
+const existingContractAddr = "0xE72651e0df9e441874981d09B9356c8c6ef89f0E";  // fuji
 
 async function main() {
   const chainedVampiresContract = await hre.ethers.getContractAt("ChainedVampires", existingContractAddr);
   const owner = await ethers.provider.getSigner("0x95c5bDD933BE67a9fF67a5DD9aE9dd440b2604dB");
-  //const signer0 = await ethers.provider.getSigner(friends[2]);
 
-  await chainedVampiresContract.connect(owner).summonVampire(1, { value: ethers.utils.parseEther("0.2") });
+  // await chainedVampiresContract.connect(owner).summonVampire(1, { value: ethers.utils.parseEther("0.2") });
+  await chainedVampiresContract.connect(owner).summonVampire(1, { value: 200000000000000000n });
 
-  let currId = await chainedVampiresContract.connect(owner).getCurrentTokenId();
-  console.log(currId.toString());
-  let intID = parseInt(currId) - 1;
-  console.log("Int ID: " + intID.toString());
-  let uri = await chainedVampiresContract.connect(owner).tokenURI(ethers.BigNumber.from(intID.toString()));
+  // let currId = await chainedVampiresContract.connect(owner).getCurrentTokenId();
+  // console.log(currId.toString());
+  // let intID = parseInt(currId) - 1;
+  // console.log("Int ID: " + intID.toString());
+  // let uri = await chainedVampiresContract.connect(owner).tokenURI(ethers.BigNumber.from(intID.toString()));
   
-  console.log("Minting is complete with URI:" + uri.toString());
+  console.log("Minting is complete" );
 }
 
 main()

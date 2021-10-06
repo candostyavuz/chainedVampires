@@ -1,5 +1,5 @@
 const fs = require("fs");
-const baseUri = "ipfs://QmTsBHZEcxpQpU9c7DYFyFe1VDaNpSCi8HgCnNpYMRF1Fa";
+const baseUri = "ipfs://QmNp3VP2nPxe2Eci8pQqHnCUyzFJaAEPLFtyobCooLZeTT";
 
 // read json data
 let rawdata = fs.readFileSync(`generative-art/output/metadata/_allmetadata.json`);
