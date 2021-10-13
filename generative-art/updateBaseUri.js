@@ -1,16 +1,29 @@
 const fs = require("fs");
-const baseUri = "ipfs://QmNp3VP2nPxe2Eci8pQqHnCUyzFJaAEPLFtyobCooLZeTT";
+const { ethers } = require("hardhat");
+const baseUri = "ipfs://QmcHTJQFUoB5vemK4KZhm1hkEyiaCeNStwKr8phK71tjLu";
+
+const HASH_BASE = "mokar";
 
 // read json data
 let rawdata = fs.readFileSync(`generative-art/output/metadata/_allmetadata.json`);
 let data = JSON.parse(rawdata);
 
 data.forEach((item) => {
-  item.image = `${baseUri}/${item.edition}.png`;
+  let hashInput = ethers.utils.toUtf8Bytes(HASH_BASE + item.edition.toString());
+  let intHash = BigInt(ethers.utils.keccak256(hashInput));
+  let hash = (intHash.toString());
+
+  item.image = `${baseUri}/${hash}.png`;
   fs.writeFileSync(
-    `./generative-art/output/metadata/${item.edition}.json`,
+    `./generative-art/output/metadata/${hash}.json`,
     JSON.stringify(item, null, 2)
   );
+
+  // item.image = `${baseUri}/${item.edition}.png`;
+  // fs.writeFileSync(
+  //   `./generative-art/output/metadata/${item.edition}.json`,
+  //   JSON.stringify(item, null, 2)
+  // );
 });
 
 fs.writeFileSync(

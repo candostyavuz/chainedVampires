@@ -17,24 +17,42 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     string public baseURI;
     string public baseExtension = ".json";
     bool public paused = false;
-    uint256 private salePrice = 200000000000000000; // 0.2 AVAX
-    address private _admin;
-    // Tokenomic State Variables:
+    uint256 private salePrice = 0.2 ether; // 0.2 AVAX
+    address payable private _admin;
+    //
+    string private HASH_BASE;
+    // Tokenomic State Variables
     uint256 public totalHolderBalance = 0; // Total profit to be distributed to nft holders
     uint256 public currentDividendPerHolder = 0; // Current dividend obtained from minting of a new NFT
     mapping(uint256 => uint256) public lastDividendAt; // tokenId to deserved profit for its owner
     mapping(uint256 => address) public minter; // tokenId to minter address
 
-    // receive() external payable {}   
+    // Market State Variables  
+    enum SaleState {ForSale, Sold, Idle}
 
-    constructor(string memory _initBaseURI, address admin) ERC721("ChainedVampires", "CVAMP") {
+    struct Item {
+        uint256 price;
+        SaleState state;
+    }
+    mapping(uint256 => Item) public MarketItem;
+
+    event Sold(uint256 indexed tokenId, uint256 price);
+    event MarketItemCreated (
+        uint256 indexed tokenId,
+        uint256 price,
+        SaleState state
+    );
+
+    // 
+    constructor(string memory _initBaseURI, address admin, string memory _initHashBase) ERC721("ChainedVampires", "CVAMP") {
         setBaseURI(_initBaseURI);
-        _admin = admin;
+        setHashBase(_initHashBase);
+        _admin = payable(admin);
     }
 
     function summonVampire(uint256 _amount) public payable {
         require(!paused, "Sale must be active!");
-        require(msg.value == salePrice * _amount, "Insufficient funds!");
+        require(msg.value >= salePrice * _amount, "Insufficient funds!");
         require(_amount > 0, "Amount must be bigger than zero!");
         require(_amount < 21, "Max 20 vamps can be minted in one order!");
         require(
@@ -76,8 +94,13 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
         );
 
         string memory currentBaseURI = _baseURI();
+        // bytes32 idHash = keccak256(abi.encodePacked(HASH_BASE, tokenId.toString()));
+        uint256 idHashInt = uint256(
+             keccak256(abi.encodePacked(HASH_BASE, tokenId.toString()))
+        );
+        
         return bytes(currentBaseURI).length > 0
-                ? string(abi.encodePacked(currentBaseURI, tokenId.toString(), baseExtension))
+                ? string(abi.encodePacked(currentBaseURI, idHashInt.toString(), baseExtension))
                 : "";
     }
 
@@ -85,7 +108,7 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     function distributeMintFee(uint256 _revenue) private {
         uint256 holderShare = _revenue / 10; // 10% is distributed among holders
         uint256 contractShare = _revenue - holderShare;
-        payable(_admin).transfer(contractShare);
+        (_admin).transfer(contractShare);
 
         totalHolderBalance += holderShare; // Updatede total distributed revenue
         currentDividendPerHolder += holderShare / totalSupply(); // Dividend for current holders
@@ -130,10 +153,54 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
         }
         payable(msg.sender).transfer(totalReward);
     }
+
+    // Market
+    function putToSale(uint256 _tokenId, uint256 _price) external {
+        require(msg.sender == ownerOf(_tokenId));
+        require(_price > 0 , "Sale price cannot be zero!");
+        MarketItem[_tokenId].price = _price;
+        MarketItem[_tokenId].state = SaleState.ForSale;
+        emit MarketItemCreated(
+            _tokenId,
+            MarketItem[_tokenId].price, 
+            MarketItem[_tokenId].state );
+        }
     
+    function cancelSale(uint256 _tokenId) external {
+        require(msg.sender == ownerOf(_tokenId));
+        delete MarketItem[_tokenId].price;
+        MarketItem[_tokenId].state = SaleState.Idle;
+    }
+
+    function buyItem(uint256 _tokenId) external payable {
+        address payable seller = payable(ownerOf(_tokenId));
+
+        require(msg.value >= MarketItem[_tokenId].price, "Can't buy. Price issue");
+        require(MarketItem[_tokenId].state == SaleState.ForSale, "Item is not for sale");
+
+        uint256 fee = marketFee(msg.value);
+        uint256 toSeller = msg.value - fee;
+
+        seller.transfer(toSeller);
+        (_admin).transfer(fee);
+
+        _transfer(seller, msg.sender, _tokenId);
+        MarketItem[_tokenId].state = SaleState.Sold;
+        emit Sold(_tokenId, msg.value);
+    }
+
+    function marketFee(uint256 _value) internal pure returns (uint256) {
+        uint256 fee = (_value * 3) / 100;
+        return fee;
+    }
+
     // Only Owner
     function setBaseURI(string memory _newBaseURI) public onlyOwner {
         baseURI = _newBaseURI;
+    }
+    
+    function setHashBase(string memory _newHashBase) public onlyOwner {
+        HASH_BASE = _newHashBase;
     }
 
     function pause(bool _state) public onlyOwner {
@@ -141,7 +208,8 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     }
 
     function withdraw() external onlyOwner {
-        payable(msg.sender).transfer(address(this).balance);
+        (bool success, ) = payable(msg.sender).call{value: address(this).balance}("");
+        require(success);
     }
 
     // Getters

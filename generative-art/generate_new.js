@@ -1,4 +1,5 @@
 require("dotenv").config();
+const { ethers } = require("hardhat");
 const fs = require("fs");
 const { createCanvas, loadImage } = require("canvas");
 
@@ -25,6 +26,8 @@ let genderStr;  // Determines the gender of current creation
 const console = require("console");
 const canvas = createCanvas(width, height);
 const ctx = canvas.getContext("2d");
+
+const HASH_BASE = "mokar";
 
 var attributesList = [];
 var dnaList = [];
@@ -63,16 +66,34 @@ const saveAll = async () => {
   let imgDir = "";
   let metaDir = "";
   for (let i = 0; i < nftBuffer.length; i++) {
+    // let the chaos begin
+    let hashInput = ethers.utils.toUtf8Bytes(HASH_BASE + nftBuffer[i].metadata.edition.toString());
+    let intHash = BigInt(ethers.utils.keccak256(hashInput));
+    let hash = (intHash.toString());
+
+    //
     console.log("Saving Image no: " + nftBuffer[i].metadata.edition);
-    imgDir = `./generative-art/output/image/${nftBuffer[i].metadata.edition}.png`;
+    imgDir = `./generative-art/output/image/${hash}.png`;
     fs.writeFileSync(imgDir, (nftBuffer[i].image));
 
     console.log("Saving Metadata: " + nftBuffer[i].metadata.edition);
-    metaDir = `./generative-art/output/metadata/${nftBuffer[i].metadata.edition}.json`;
+    metaDir = `./generative-art/output/metadata/${hash}.json`;
     nftBuffer[i].metadata.name += ` #${nftBuffer[i].metadata.edition}`;
     fs.writeFileSync(metaDir, JSON.stringify(nftBuffer[i].metadata));
 
     metadataArr.push(nftBuffer[i].metadata);
+
+    // //
+    // console.log("Saving Image no: " + nftBuffer[i].metadata.edition);
+    // imgDir = `./generative-art/output/image/${nftBuffer[i].metadata.edition}.png`;
+    // fs.writeFileSync(imgDir, (nftBuffer[i].image));
+
+    // console.log("Saving Metadata: " + nftBuffer[i].metadata.edition);
+    // metaDir = `./generative-art/output/metadata/${nftBuffer[i].metadata.edition}.json`;
+    // nftBuffer[i].metadata.name += ` #${nftBuffer[i].metadata.edition}`;
+    // fs.writeFileSync(metaDir, JSON.stringify(nftBuffer[i].metadata));
+
+    // metadataArr.push(nftBuffer[i].metadata);
   };
   console.log("NFT's have been generated and saved successfully!");
 }
