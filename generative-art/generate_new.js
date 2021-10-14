@@ -27,7 +27,27 @@ const console = require("console");
 const canvas = createCanvas(width, height);
 const ctx = canvas.getContext("2d");
 
-const HASH_BASE = "mokar";
+const HASH_BASE = "fikret";
+
+let createdNFTcount = 0;
+
+let createdMale = {
+  maleCntTotal: 0,
+  scavengerCnt: 0,
+  predatorCnt: 0,
+  nosferatuCnt: 0,
+  elderCnt: 0,
+  draxoCnt: 0
+}
+
+let createdFemale = {
+  femaleCntTotal: 0,
+  scavengerCnt: 0,
+  predatorCnt: 0,
+  nosferatuCnt: 0,
+  elderCnt: 0,
+  draxoCnt: 0
+}
 
 var attributesList = [];
 var dnaList = [];
@@ -36,13 +56,14 @@ var dnaListFemale = [];
 var nftBuffer = [];
 let metadataArr = [];
 
-const saveNFT = async (_metadata, _dna) => {
+const saveNFT = async (_metadata) => {
   let NFTobj = {
     image: canvas.toBuffer("image/png"),
     metadata: _metadata
   };
   nftBuffer.push(NFTobj);
-  console.log("New nft object has been added with DNA: " + _dna);
+  console.log("Number of NFTs created: " + createdNFTcount.toString());
+  createdNFTcount++;
 };
 
 const shuffleAll = () => {
@@ -72,13 +93,17 @@ const saveAll = async () => {
     let hash = (intHash.toString());
 
     //
-    console.log("Saving Image no: " + nftBuffer[i].metadata.edition);
+    //console.log("Saving Image no: " + nftBuffer[i].metadata.edition);
     imgDir = `./generative-art/output/image/${hash}.png`;
     fs.writeFileSync(imgDir, (nftBuffer[i].image));
 
-    console.log("Saving Metadata: " + nftBuffer[i].metadata.edition);
+    console.log("Saving Image and Metadata: " + nftBuffer[i].metadata.edition);
     metaDir = `./generative-art/output/metadata/${hash}.json`;
-    nftBuffer[i].metadata.name += ` #${nftBuffer[i].metadata.edition}`;
+    if(nftBuffer[i].metadata.name != "Lord Dracula") {
+      if((nftBuffer[i].metadata.name.includes("Draxo") == false)){
+        nftBuffer[i].metadata.name += ` #${nftBuffer[i].metadata.edition}`;
+      }
+    }
     fs.writeFileSync(metaDir, JSON.stringify(nftBuffer[i].metadata));
 
     metadataArr.push(nftBuffer[i].metadata);
@@ -96,6 +121,19 @@ const saveAll = async () => {
     // metadataArr.push(nftBuffer[i].metadata);
   };
   console.log("NFT's have been generated and saved successfully!");
+  console.log("Creation info:");
+  console.log("Total male: " + createdMale.maleCntTotal);
+  console.log("Total male scavanger: " + createdMale.scavengerCnt);
+  console.log("Total male predator: " + createdMale.predatorCnt);
+  console.log("Total male nosferatu: " + createdMale.nosferatuCnt);
+  console.log("Total male elder: " + createdMale.elderCnt);
+  console.log("Total male draxo: " + createdMale.draxoCnt);
+  console.log("Total female: " + createdFemale.femaleCntTotal);
+  console.log("Total female scavanger: " + createdFemale.scavengerCnt);
+  console.log("Total female predator: " + createdFemale.predatorCnt);
+  console.log("Total female nosferatu: " + createdFemale.nosferatuCnt);
+  console.log("Total female elder: " + createdFemale.elderCnt);
+  console.log("Total female draxo: " + createdFemale.draxoCnt);
 }
 
 const genColor = () => {
@@ -150,7 +188,7 @@ const addMetadata = async (_dna, _edition, _rarity) => {
   attributesList.push(
     {
       "trait_type": "DNA",
-      "value": _dna.map(String)
+      "value": _dna.toString()
     });
 
   let tempMetadata = {
@@ -163,9 +201,41 @@ const addMetadata = async (_dna, _edition, _rarity) => {
     attributes: attributesList,
   };
   // writeMetaData(tempMetadata, _edition);
-  await saveNFT(tempMetadata, _dna.map(String));
+  await saveNFT(tempMetadata);
   attributesList = [];
+
+  updateCnt(clanString);
 };
+
+const updateCnt = (clanString) => {
+  if (genderStr == "male") {
+    createdMale.maleCntTotal++;
+    if (clanString == "Elder Vampire") {
+      createdMale.elderCnt++;
+    } else if (clanString == "Nosferatu") {
+      createdMale.nosferatuCnt++;
+    } else if (clanString == "Predator") {
+      createdMale.predatorCnt++;
+    } else if (clanString == "Scavenger") {
+      createdMale.scavengerCnt++;
+    } else {
+      createdMale.draxoCnt++;
+    }
+  } else {
+    createdFemale.femaleCntTotal++;
+    if (clanString == "Elder Vampire") {
+      createdFemale.elderCnt++;
+    } else if (clanString == "Nosferatu") {
+      createdFemale.nosferatuCnt++;
+    } else if (clanString == "Predator") {
+      createdFemale.predatorCnt++;
+    } else if (clanString == "Scavenger") {
+      createdFemale.scavengerCnt++;
+    } else {
+      createdFemale.draxoCnt++;
+    }
+  }
+}
 
 const writeMetaData = (_data, _edition) => {
   fs.writeFileSync(`./generative-art/output/metadata/${_edition}.json`, JSON.stringify(_data));
@@ -233,8 +303,17 @@ const getRarity = (_editionCount) => {
         rarity = rarityWeight.value;
       }
     });
-  } else {
+  } else if (genderStr === "female"){
     rarityWeights_female.forEach((rarityWeight) => {
+      if (
+        _editionCount >= rarityWeight.from &&
+        _editionCount <= rarityWeight.to
+      ) {
+        rarity = rarityWeight.value;
+      }
+    });
+  } else {
+    rarityWeights_draxo.forEach((rarityWeight) => {
       if (
         _editionCount >= rarityWeight.from &&
         _editionCount <= rarityWeight.to
@@ -329,10 +408,172 @@ const startCreating = async () => {
       console.log("DNA exists!");
     }
   }
+  //
+  await createDraxos(editionCount);
+  await createDracula(editionCount);
+  //
   shuffleAll();
   await saveAll();
 
   writeAllMetaData();
 };
+
+const createDraxos = async(editionCount) => {
+  let dateTime = Date.now();
+  let clanString = "Draxo";
+  // male draxo:
+  for (let i = 0; i < 9; i++) {
+    genderStr = "male";
+    attributesList.push(
+      {
+        "display_type": "date",
+        "trait_type": "Birthday",
+        "value": dateTime
+      });
+    attributesList.push(
+      {
+        "trait_type": "Gender",
+        "value": genderStr
+      });
+    attributesList.push(
+      {
+        "trait_type": "Rarity",
+        "value": "draxo"
+      });
+    attributesList.push(
+      {
+        "trait_type": "DNA",
+        "value": `turned by dracula himself`
+      });
+
+    let tempMetadata = {
+      description: description,
+      external_url: "https://chainedvampires.com",
+      name: `${clanString} - ${i}`,
+      image: `${baseImageUri}`,
+      edition: `${editionCount}`,
+      attributes: attributesList,
+    };
+
+    const image = await loadImage(`generative-art/vampireParts/draxo/male/draxomale${i+1}.png`);
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+
+    let NFTobj = {
+      image: canvas.toBuffer("image/png"),
+      metadata: tempMetadata
+    };
+    nftBuffer.push(NFTobj);
+    console.log("Draxo male NFT created: " + createdNFTcount.toString());
+    createdNFTcount++;
+
+    attributesList = [];
+    editionCount++;
+    updateCnt(clanString);
+  }
+
+  // female draxo:
+  for (let i = 0; i < 9; i++) {
+    genderStr = "female";
+    attributesList.push(
+      {
+        "display_type": "date",
+        "trait_type": "Birthday",
+        "value": dateTime
+      });
+    attributesList.push(
+      {
+        "trait_type": "Gender",
+        "value": genderStr
+      });
+    attributesList.push(
+      {
+        "trait_type": "Rarity",
+        "value": "draxo"
+      });
+    attributesList.push(
+      {
+        "trait_type": "DNA",
+        "value": `turned by dracula himself`
+      });
+
+    let tempMetadata = {
+      description: description,
+      external_url: "https://chainedvampires.com",
+      name: `${clanString} - ${i}`,
+      image: `${baseImageUri}`,
+      edition: `${editionCount}`,
+      attributes: attributesList,
+    };
+
+    const image = await loadImage(`generative-art/vampireParts/draxo/female/draxofemale${i+1}.png`);
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+
+    let NFTobj = {
+      image: canvas.toBuffer("image/png"),
+      metadata: tempMetadata
+    };
+    nftBuffer.push(NFTobj);
+    console.log("Draxo female NFT created: " + createdNFTcount.toString());
+    createdNFTcount++;
+
+    attributesList = [];
+    editionCount++;
+    updateCnt(clanString);
+  }
+}
+
+const createDracula = async(editionCount) => {
+  let dateTime = Date.now();
+  let clanString = "Lord Dracula";
+  
+    genderStr = "male";
+    attributesList.push(
+      {
+        "display_type": "date",
+        "trait_type": "Birthday",
+        "value": dateTime
+      });
+    attributesList.push(
+      {
+        "trait_type": "Gender",
+        "value": genderStr
+      });
+    attributesList.push(
+      {
+        "trait_type": "Rarity",
+        "value": "dracula"
+      });
+    attributesList.push(
+      {
+        "trait_type": "DNA",
+        "value": `the lord of all vampires. now you have it.`
+      });
+
+    let tempMetadata = {
+      description: description,
+      external_url: "https://chainedvampires.com",
+      name: `Lord Dracula`,
+      image: `${baseImageUri}`,
+      edition: `${editionCount}`,
+      attributes: attributesList,
+    };
+
+    const image = await loadImage(`generative-art/vampireParts/dracula/DRACULA.png`);
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+
+    let NFTobj = {
+      image: canvas.toBuffer("image/png"),
+      metadata: tempMetadata
+    };
+    nftBuffer.push(NFTobj);
+    console.log("Lord Dracula has been created " + createdNFTcount.toString());
+    createdNFTcount++;
+
+    attributesList = [];
+    editionCount++;
+}
 
 startCreating();

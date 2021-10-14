@@ -3,30 +3,30 @@ const width = 1000;
 const height = 1000;
 const dir = "./generative-art/vampireParts";
 const startEditionFrom_female = 0;
-const endEditionAt_female = 20;
+const endEditionAt_female = 3490;
 
 const vampGender_female = "female";  //"male";
 
-const rarityWeights_female = [
+const rarityWeights = [
   {
     value: "tier_0",
     from: 0,
-    to: 3,
+    to: 210,
   },
   {
     value: "tier_1",
-    from: 4,
-    to: 7,
+    from: 211,
+    to: 838,
   },
   {
     value: "tier_2",
-    from: 8,
-    to: 14,
+    from: 839,
+    to: 2024,
   },
   {
     value: "tier_3",
-    from: 15,
-    to: endEditionAt_female,
+    from: 2025,
+    to: endEditionAt,
   },
 ];
 
