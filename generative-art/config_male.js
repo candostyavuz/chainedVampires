@@ -5,7 +5,8 @@ const dir = "./generative-art/vampireParts";
 const description = "Vampire legion of the metaverse, combining unique NFT collector experience with passive income dynamics. Total of 7000 algorithmically generated Chained Vampires are available only on Avalanche. Fees are reflected and rewards can be claimed anytime, distributed as $AVAX.";
 const baseImageUri = "ipfs://";
 const startEditionFrom = 0;
-const endEditionAt = 3489;
+// const endEditionAt = 3490;
+const endEditionAt = 2;
 
 const vampGender_male = "male"; 
 

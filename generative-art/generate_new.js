@@ -28,6 +28,8 @@ const canvas = createCanvas(width, height);
 const ctx = canvas.getContext("2d");
 
 const HASH_BASE = "fikret";
+let draculaFileName;
+let draxoFileNames = [];
 
 let createdNFTcount = 0;
 
@@ -103,7 +105,15 @@ const saveAll = async () => {
       if((nftBuffer[i].metadata.name.includes("Draxo") == false)){
         nftBuffer[i].metadata.name += ` #${nftBuffer[i].metadata.edition}`;
       }
+    } 
+
+    if(nftBuffer[i].metadata.name === "Lord Dracula"){
+      draculaFileName = hash.toString();
     }
+    if(nftBuffer[i].metadata.name.includes("Draxo")) {
+      draxoFileNames.push(hash.toString());
+    }
+
     fs.writeFileSync(metaDir, JSON.stringify(nftBuffer[i].metadata));
 
     metadataArr.push(nftBuffer[i].metadata);
@@ -134,6 +144,15 @@ const saveAll = async () => {
   console.log("Total female nosferatu: " + createdFemale.nosferatuCnt);
   console.log("Total female elder: " + createdFemale.elderCnt);
   console.log("Total female draxo: " + createdFemale.draxoCnt);
+  console.log("Total created NFTs:" + createdNFTcount);
+  console.log("Dracula is saved with hash name of: " + draculaFileName);
+  try{
+    for(let i = 0 ; i < draxoFileNames.length; i++) {
+      console.log("Draxos are saved with hash name of: " + draxoFileNames[i]);
+    }
+  } catch(err) {
+    console.log(err);
+  }
 }
 
 const genColor = () => {
@@ -409,8 +428,7 @@ const startCreating = async () => {
     }
   }
   //
-  await createDraxos(editionCount);
-  await createDracula(editionCount);
+  await createSpecials(editionCount);
   //
   shuffleAll();
   await saveAll();
@@ -418,7 +436,7 @@ const startCreating = async () => {
   writeAllMetaData();
 };
 
-const createDraxos = async(editionCount) => {
+const createSpecials = async(editionCount) => {
   let dateTime = Date.now();
   let clanString = "Draxo";
   // male draxo:
@@ -449,7 +467,7 @@ const createDraxos = async(editionCount) => {
     let tempMetadata = {
       description: description,
       external_url: "https://chainedvampires.com",
-      name: `${clanString} - ${i}`,
+      name: `${clanString} Male - ${i}`,
       image: `${baseImageUri}`,
       edition: `${editionCount}`,
       attributes: attributesList,
@@ -471,7 +489,6 @@ const createDraxos = async(editionCount) => {
     editionCount++;
     updateCnt(clanString);
   }
-
   // female draxo:
   for (let i = 0; i < 9; i++) {
     genderStr = "female";
@@ -500,7 +517,7 @@ const createDraxos = async(editionCount) => {
     let tempMetadata = {
       description: description,
       external_url: "https://chainedvampires.com",
-      name: `${clanString} - ${i}`,
+      name: `${clanString} Female - ${i}`,
       image: `${baseImageUri}`,
       edition: `${editionCount}`,
       attributes: attributesList,
@@ -522,58 +539,54 @@ const createDraxos = async(editionCount) => {
     editionCount++;
     updateCnt(clanString);
   }
-}
+  // lord dracula
+  clanString = "Lord Dracula";
+  genderStr = "male";
+  attributesList.push(
+    {
+      "display_type": "date",
+      "trait_type": "Birthday",
+      "value": dateTime
+    });
+  attributesList.push(
+    {
+      "trait_type": "Gender",
+      "value": genderStr
+    });
+  attributesList.push(
+    {
+      "trait_type": "Rarity",
+      "value": "dracula"
+    });
+  attributesList.push(
+    {
+      "trait_type": "DNA",
+      "value": `the lord of all vampires. now you have it.`
+    });
 
-const createDracula = async(editionCount) => {
-  let dateTime = Date.now();
-  let clanString = "Lord Dracula";
-  
-    genderStr = "male";
-    attributesList.push(
-      {
-        "display_type": "date",
-        "trait_type": "Birthday",
-        "value": dateTime
-      });
-    attributesList.push(
-      {
-        "trait_type": "Gender",
-        "value": genderStr
-      });
-    attributesList.push(
-      {
-        "trait_type": "Rarity",
-        "value": "dracula"
-      });
-    attributesList.push(
-      {
-        "trait_type": "DNA",
-        "value": `the lord of all vampires. now you have it.`
-      });
+  let tempMetadata = {
+    description: description,
+    external_url: "https://chainedvampires.com",
+    name: `Lord Dracula`,
+    image: `${baseImageUri}`,
+    edition: `${editionCount}`,
+    attributes: attributesList,
+  };
 
-    let tempMetadata = {
-      description: description,
-      external_url: "https://chainedvampires.com",
-      name: `Lord Dracula`,
-      image: `${baseImageUri}`,
-      edition: `${editionCount}`,
-      attributes: attributesList,
-    };
+  const image = await loadImage(`generative-art/vampireParts/dracula/DRACULA.png`);
+  ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(image, 0, 0, width, height);
 
-    const image = await loadImage(`generative-art/vampireParts/dracula/DRACULA.png`);
-    ctx.clearRect(0, 0, width, height);
-    ctx.drawImage(image, 0, 0, width, height);
+  let NFTobj = {
+    image: canvas.toBuffer("image/png"),
+    metadata: tempMetadata
+  };
+  nftBuffer.push(NFTobj);
+  console.log("Lord Dracula has been created " + createdNFTcount.toString());
+  createdNFTcount++;
 
-    let NFTobj = {
-      image: canvas.toBuffer("image/png"),
-      metadata: tempMetadata
-    };
-    nftBuffer.push(NFTobj);
-    console.log("Lord Dracula has been created " + createdNFTcount.toString());
-    createdNFTcount++;
-
-    attributesList = [];
-    editionCount++;
+  attributesList = [];
+  editionCount++;
 }
 
 startCreating();
