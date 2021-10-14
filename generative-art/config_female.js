@@ -7,7 +7,7 @@ const endEditionAt_female = 3490;
 
 const vampGender_female = "female";  //"male";
 
-const rarityWeights = [
+const rarityWeights_female = [
   {
     value: "tier_0",
     from: 0,
@@ -26,7 +26,7 @@ const rarityWeights = [
   {
     value: "tier_3",
     from: 2025,
-    to: endEditionAt,
+    to: endEditionAt_female,
   },
 ];
 
