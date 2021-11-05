@@ -9,26 +9,32 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     using Counters for Counters.Counter;
     using Strings for uint256;
-    
+
     Counters.Counter private _tokenIdCounter;
 
     // State variables
-    uint256 public constant MAX_VAMPIRES = 40;
+    uint256 public constant MAX_VAMPIRES = 7000;
+    uint256 private RESERVED = 30;
+    address payable private feeCollector;
+
     string public baseURI;
     string public baseExtension = ".json";
     bool public paused = false;
-    uint256 private salePrice = 0.2 ether; // 0.2 AVAX
-    address payable private _admin;
+    uint256 public mintPrice = 1 ether; // 1 AVAX
     //
     string private HASH_BASE;
     // Tokenomic State Variables
-    uint256 public totalHolderBalance = 0; // Total profit to be distributed to nft holders
+    uint256 public totalDistributedRewaords = 0; // Total profit to be distributed to nft holders
     uint256 public currentDividendPerHolder = 0; // Current dividend obtained from minting of a new NFT
     mapping(uint256 => uint256) public lastDividendAt; // tokenId to deserved profit for its owner
     mapping(uint256 => address) public minter; // tokenId to minter address
 
-    // Market State Variables  
-    enum SaleState {ForSale, Sold, Idle}
+    // Market State Variables
+    enum SaleState {
+        ForSale,
+        Sold,
+        Idle
+    }
 
     struct Item {
         uint256 price;
@@ -37,34 +43,55 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     mapping(uint256 => Item) public MarketItem;
 
     event Sold(uint256 indexed tokenId, uint256 price);
-    event MarketItemCreated (
+    event MarketItemCreated(
         uint256 indexed tokenId,
         uint256 price,
         SaleState state
     );
 
-    // 
-    constructor(string memory _initBaseURI, address admin, string memory _initHashBase) ERC721("ChainedVampires", "CVAMP") {
+    //
+    constructor(
+        string memory _initBaseURI,
+        address _feeCollector,
+        string memory _initHashBase
+    ) ERC721("ChainedVampires", "CVAMP") {
         setBaseURI(_initBaseURI);
         setHashBase(_initHashBase);
-        _admin = payable(admin);
+        feeCollector = payable(_feeCollector);
     }
 
     function summonVampire(uint256 _amount) public payable {
         require(!paused, "Sale must be active!");
-        require(msg.value >= salePrice * _amount, "Insufficient funds!");
         require(_amount > 0, "Amount must be bigger than zero!");
         require(_amount < 21, "Max 20 vamps can be minted in one order!");
+        require(msg.value >= mintPrice * _amount, "Insufficient funds!");
+
+        uint256 mintAmount;
+        if(_amount == 20) {
+            mintAmount = _amount + 6;
+        } else if(_amount >= 15) {
+            mintAmount = _amount + 4;
+        } else if(_amount >= 10) {
+            mintAmount = _amount + 2; 
+        } else if(_amount >= 5) {
+             mintAmount = _amount + 1;
+        } else {
+            mintAmount = _amount;
+        }
+
         require(
-            _tokenIdCounter.current() + _amount <= MAX_VAMPIRES,
+            _tokenIdCounter.current() + mintAmount <= MAX_VAMPIRES - RESERVED,
             "Amount exceeds remaining supply!"
         );
-        for (uint256 i = 0; i < _amount; i++) {
-            _mint(msg.sender, _tokenIdCounter.current());
+
+        for (uint256 i = 0; i < mintAmount; i++) {
+            _safeMint(msg.sender, _tokenIdCounter.current());
             minter[_tokenIdCounter.current()] = msg.sender;
             lastDividendAt[_tokenIdCounter.current()] = currentDividendPerHolder;
             _tokenIdCounter.increment();
-            distributeMintFee(salePrice);
+            if(i < _amount){             // don't reflect for promotion mints
+                distributeMintFee(mintPrice);  
+            }
         }
     }
 
@@ -96,22 +123,28 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
         string memory currentBaseURI = _baseURI();
         // bytes32 idHash = keccak256(abi.encodePacked(HASH_BASE, tokenId.toString()));
         uint256 idHashInt = uint256(
-             keccak256(abi.encodePacked(HASH_BASE, tokenId.toString()))
+            keccak256(abi.encodePacked(HASH_BASE, tokenId.toString()))
         );
-        
-        return bytes(currentBaseURI).length > 0
-                ? string(abi.encodePacked(currentBaseURI, idHashInt.toString(), baseExtension))
+
+        return
+            bytes(currentBaseURI).length > 0
+                ? string(
+                    abi.encodePacked(
+                        currentBaseURI,
+                        idHashInt.toString(),
+                        baseExtension
+                    )
+                )
                 : "";
     }
 
     // Tokenomics
     function distributeMintFee(uint256 _revenue) private {
-        uint256 holderShare = _revenue / 10; // 10% is distributed among holders
+        uint256 holderShare = _revenue / 5; // 20% is distributed among holders
         uint256 contractShare = _revenue - holderShare;
-        (_admin).transfer(contractShare);
+        (feeCollector).transfer(contractShare);
 
-        totalHolderBalance += holderShare; // Updatede total distributed revenue
-        currentDividendPerHolder += holderShare / totalSupply(); // Dividend for current holders
+        reflectDivident(holderShare);
     }
 
     function getEarnedAmount(uint256 _tokenId) public view returns (uint256) {
@@ -154,18 +187,23 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
         payable(msg.sender).transfer(totalReward);
     }
 
+    function reflectToOwners() public payable {
+        reflectDivident(msg.value);
+    }
+
     // Market
     function putToSale(uint256 _tokenId, uint256 _price) external {
         require(msg.sender == ownerOf(_tokenId));
-        require(_price > 0 , "Sale price cannot be zero!");
+        require(_price > 0, "Sale price cannot be zero!");
         MarketItem[_tokenId].price = _price;
         MarketItem[_tokenId].state = SaleState.ForSale;
         emit MarketItemCreated(
             _tokenId,
-            MarketItem[_tokenId].price, 
-            MarketItem[_tokenId].state );
-        }
-    
+            MarketItem[_tokenId].price,
+            MarketItem[_tokenId].state
+        );
+    }
+
     function cancelSale(uint256 _tokenId) external {
         require(msg.sender == ownerOf(_tokenId));
         delete MarketItem[_tokenId].price;
@@ -175,30 +213,60 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
     function buyItem(uint256 _tokenId) external payable {
         address payable seller = payable(ownerOf(_tokenId));
 
-        require(msg.value >= MarketItem[_tokenId].price, "Can't buy. Price issue");
-        require(MarketItem[_tokenId].state == SaleState.ForSale, "Item is not for sale");
+        require(
+            msg.value >= MarketItem[_tokenId].price,
+            "Can't buy. Price issue"
+        );
+        require(
+            MarketItem[_tokenId].state == SaleState.ForSale,
+            "Item is not for sale"
+        );
 
-        uint256 fee = marketFee(msg.value);
-        uint256 toSeller = msg.value - fee;
+        uint256 fee = marketFee(msg.value); // marketplace fee
+        uint256 royalty = royaltyFee(msg.value); // minter royality
+        uint256 reflection = reflectionFee(msg.value); // reflection to all holders
 
+        uint256 toSeller = msg.value - (fee + royalty + reflection); // seller share
+
+        payable(minter[_tokenId]).transfer(royalty);
+        (feeCollector).transfer(fee);
+        reflectDivident(reflection);
         seller.transfer(toSeller);
-        (_admin).transfer(fee);
 
         _transfer(seller, msg.sender, _tokenId);
         MarketItem[_tokenId].state = SaleState.Sold;
         emit Sold(_tokenId, msg.value);
     }
 
+    function reflectionFee(uint256 _value) internal pure returns (uint256) {
+        uint256 reflection = _value / 25;   // %4 market sale reflection
+        return reflection;
+    }
+
     function marketFee(uint256 _value) internal pure returns (uint256) {
-        uint256 fee = (_value * 3) / 100;
+        uint256 fee = (_value * 3) / 100;   // %3 service fee
         return fee;
+    }
+
+    function royaltyFee(uint256 _value) internal pure returns (uint256) {
+        uint256 royalty = (_value ) / 20;   // %5 royalty
+        return royalty;
+    }
+
+    function reflectDivident(uint256 _reflection) private {
+        totalDistributedRewaords += _reflection; // Updatede total distributed revenue
+        currentDividendPerHolder += _reflection / totalSupply(); // Dividend for current holders
     }
 
     // Only Owner
     function setBaseURI(string memory _newBaseURI) public onlyOwner {
         baseURI = _newBaseURI;
     }
-    
+
+    function setPrice(uint _newPrice) external onlyOwner {
+        mintPrice = _newPrice;
+    }
+
     function setHashBase(string memory _newHashBase) public onlyOwner {
         HASH_BASE = _newHashBase;
     }
@@ -207,9 +275,20 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
         paused = _state;
     }
 
-    function withdraw() external onlyOwner {
-        (bool success, ) = payable(msg.sender).call{value: address(this).balance}("");
-        require(success);
+    function giveAway(address _to, uint256 _amount) external onlyOwner {
+        require(
+            _amount <= RESERVED,
+            "Amount exceeds reserved giveaway supply!"
+        );
+        for (uint256 i = 0; i < _amount; i++) {
+            _safeMint(_to, _tokenIdCounter.current());
+            minter[_tokenIdCounter.current()] = _to; // Full ownership is given to rewarded address
+            lastDividendAt[
+                _tokenIdCounter.current()
+            ] = currentDividendPerHolder;
+            _tokenIdCounter.increment();
+        }
+        RESERVED -= _amount;
     }
 
     // Getters
@@ -221,11 +300,10 @@ contract ChainedVampires is ERC721, ERC721Enumerable, Ownable {
         return minter[_tokenId];
     }
 
-      // internal
+    // internal
     function _baseURI() internal view virtual override returns (string memory) {
         return baseURI;
     }
-
 
     // The following functions are overrides required by Solidity.
     function _beforeTokenTransfer(

@@ -4,7 +4,8 @@ const height = 1000;
 const dir = "./generative-art/vampireParts";
 const startEditionFrom_female = 0;
 // const endEditionAt_female = 3490;
-const endEditionAt_female = 2;
+const endEditionAt_female = 3;
+
 
 const vampGender_female = "female";  //"male";
 

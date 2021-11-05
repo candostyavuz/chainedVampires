@@ -117,19 +117,8 @@ const saveAll = async () => {
     fs.writeFileSync(metaDir, JSON.stringify(nftBuffer[i].metadata));
 
     metadataArr.push(nftBuffer[i].metadata);
-
-    // //
-    // console.log("Saving Image no: " + nftBuffer[i].metadata.edition);
-    // imgDir = `./generative-art/output/image/${nftBuffer[i].metadata.edition}.png`;
-    // fs.writeFileSync(imgDir, (nftBuffer[i].image));
-
-    // console.log("Saving Metadata: " + nftBuffer[i].metadata.edition);
-    // metaDir = `./generative-art/output/metadata/${nftBuffer[i].metadata.edition}.json`;
-    // nftBuffer[i].metadata.name += ` #${nftBuffer[i].metadata.edition}`;
-    // fs.writeFileSync(metaDir, JSON.stringify(nftBuffer[i].metadata));
-
-    // metadataArr.push(nftBuffer[i].metadata);
   };
+
   console.log("NFT's have been generated and saved successfully!");
   console.log("Creation info:");
   console.log("Total male: " + createdMale.maleCntTotal);
@@ -146,11 +135,11 @@ const saveAll = async () => {
   console.log("Total female draxo: " + createdFemale.draxoCnt);
   console.log("Total created NFTs:" + createdNFTcount);
   console.log("Dracula is saved with hash name of: " + draculaFileName);
-  try{
-    for(let i = 0 ; i < draxoFileNames.length; i++) {
+  try {
+    for (let i = 0; i < draxoFileNames.length; i++) {
       console.log("Draxos are saved with hash name of: " + draxoFileNames[i]);
     }
-  } catch(err) {
+  } catch (err) {
     console.log(err);
   }
 }
@@ -215,6 +204,7 @@ const addMetadata = async (_dna, _edition, _rarity) => {
     external_url: "https://chainedvampires.com",
     // name: `${clanString} #${_edition}`,
     name: `${clanString}`,
+    // dna: _dna.toString(),
     image: `${baseImageUri}`,
     edition: `${_edition}`,
     attributes: attributesList,
@@ -322,7 +312,7 @@ const getRarity = (_editionCount) => {
         rarity = rarityWeight.value;
       }
     });
-  } else if (genderStr === "female"){
+  } else if (genderStr === "female") {
     rarityWeights_female.forEach((rarityWeight) => {
       if (
         _editionCount >= rarityWeight.from &&
@@ -436,7 +426,7 @@ const startCreating = async () => {
   writeAllMetaData();
 };
 
-const createSpecials = async(editionCount) => {
+const createSpecials = async (editionCount) => {
   let dateTime = Date.now();
   let clanString = "Draxo";
   // male draxo:
@@ -468,12 +458,13 @@ const createSpecials = async(editionCount) => {
       description: description,
       external_url: "https://chainedvampires.com",
       name: `${clanString} Male - ${i}`,
+      // dna: `7676d69${editionCount}`,  // hex representation of wgmi
       image: `${baseImageUri}`,
       edition: `${editionCount}`,
       attributes: attributesList,
     };
 
-    const image = await loadImage(`generative-art/vampireParts/draxo/male/draxomale${i+1}.png`);
+    const image = await loadImage(`generative-art/vampireParts/draxo/male/draxomale${i + 1}.png`);
     ctx.clearRect(0, 0, width, height);
     ctx.drawImage(image, 0, 0, width, height);
 
@@ -518,12 +509,13 @@ const createSpecials = async(editionCount) => {
       description: description,
       external_url: "https://chainedvampires.com",
       name: `${clanString} Female - ${i}`,
+      // dna: `7676d69${editionCount}`,  // hex representation of wgmi
       image: `${baseImageUri}`,
       edition: `${editionCount}`,
       attributes: attributesList,
     };
 
-    const image = await loadImage(`generative-art/vampireParts/draxo/female/draxofemale${i+1}.png`);
+    const image = await loadImage(`generative-art/vampireParts/draxo/female/draxofemale${i + 1}.png`);
     ctx.clearRect(0, 0, width, height);
     ctx.drawImage(image, 0, 0, width, height);
 
@@ -568,6 +560,7 @@ const createSpecials = async(editionCount) => {
     description: description,
     external_url: "https://chainedvampires.com",
     name: `Lord Dracula`,
+    // dna: "656d696e",  // hex representation of "emin"
     image: `${baseImageUri}`,
     edition: `${editionCount}`,
     attributes: attributesList,

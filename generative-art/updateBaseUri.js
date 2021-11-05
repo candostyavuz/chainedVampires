@@ -1,8 +1,8 @@
 const fs = require("fs");
 const { ethers } = require("hardhat");
-const baseUri = "ipfs://QmcHTJQFUoB5vemK4KZhm1hkEyiaCeNStwKr8phK71tjLu";
+const baseUri = "ipfs://Qmd7DdbQNrdkQQZaQDqXRG2o7cKK488k3a683YZkZbFCyV";
 
-const HASH_BASE = "mokar";
+const HASH_BASE = "fikret";
 
 // read json data
 let rawdata = fs.readFileSync(`generative-art/output/metadata/_allmetadata.json`);
