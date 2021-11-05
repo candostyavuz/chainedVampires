@@ -4,9 +4,11 @@ Chained Vampires are 7000 algorithmically generated NFTs, chained on Avalanche n
 1) 20% Minting Fee Reflections to all Vampire owners!
 
 If you are among early minters, not only you will amortize minting fee but also your vampire will continue sucking AVAX for you from each minting as long as you hold it.
+
 2) 5% life time royalty to original minter
 
 Vampires care alot about their minter. Each time a vampire is sold, its original minter will get 5% from each sale. Forever.
+
 3) 4% marketplace revenue distribution for all vampire owners
 
 Marketplace will open when minting process is complete. From each second hand sale, all holders will get %4 of the revenue.
